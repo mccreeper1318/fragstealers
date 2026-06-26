@@ -1,0 +1,16 @@
+# FragStealers
+# Players lock a chest or barrel by placing a sign on it and entering [fs] on line 1.
+# The sign will be changed to:
+# [protected]
+# PlayerName
+
+messages:
+  lock-created: "Container protected. Break the [protected] sign to unlock it."
+  sign-must-touch-container: "FragStealers signs must be attached to a chest or barrel."
+  already-protected: "That container is already protected."
+  not-your-container: "This container is protected by {owner}."
+  break-sign-first: "Break the [protected] sign first to unlock this container."
+  sign-break-denied: "Only {owner} can break this protection sign."
+  sign-edit-denied: "Only {owner} can edit this protection sign."
+  sign-edited: "Protection sign updated."
+  unlocked: "Container protection removed."

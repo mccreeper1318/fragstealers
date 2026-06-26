@@ -1,0 +1,6 @@
+name: FragStealers
+version: '${version}'
+main: me.pinnacle.fragstealers.FragStealers
+api-version: '26.2'
+author: Kevin
+description: Lock chests and barrels with [fs] signs.
