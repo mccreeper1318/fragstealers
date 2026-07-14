@@ -3,6 +3,13 @@
 # The sign will be changed to:
 # [protected]
 # PlayerName
+#
+# Administrators with the appropriate permissions can use:
+# /fs give masterkey [player]
+#
+# The Master Key is a custom wooden axe. While held in the main hand, it can open
+# any protected chest/barrel and break any protection sign. It does not directly
+# break a container while that container is still protected.
 
 messages:
   lock-created: "Container protected. Break the [protected] sign to unlock it."
@@ -14,3 +21,10 @@ messages:
   sign-edit-denied: "Only {owner} can edit this protection sign."
   sign-edited: "Protection sign updated."
   unlocked: "Container protection removed."
+  master-key-unlocked: "Master Key removed {owner}'s container protection."
+  no-command-permission: "You do not have permission to use this command."
+  master-key-usage: "Usage: /fs give masterkey [player]"
+  master-key-console-target: "Console must specify an online player: /fs give masterkey <player>"
+  player-not-found: "Player {player} is not online."
+  master-key-received: "You received a FragStealers Master Key."
+  master-key-given: "Gave a FragStealers Master Key to {player}."

@@ -3,9 +3,9 @@ plugins {
 }
 
 group = "me.pinnacle"
-version = "1.0.1"
+version = "1.1.0"
 
-description = "Chest and barrel protection using [fs] signs."
+description = "Chest and barrel protection using [fs] signs with an administrative Master Key."
 
 repositories {
     maven {

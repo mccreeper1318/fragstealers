@@ -1,8 +1,8 @@
 # FragStealers
 
-FragStealers is a PaperMC plugin for Minecraft/Paper `26.2` that lets players protect chests and barrels using signs.
+FragStealers is a PaperMC plugin for Minecraft/Paper `26.2` that lets players protect chests and barrels using signs. Version `1.1.0` adds an administrator-only Master Key for resolving false or malicious ownership claims.
 
-## How to use
+## Protecting storage
 
 1. Place a sign directly on a chest or barrel, either attached to the side or placed on top.
 2. Put this on the first line:
@@ -13,7 +13,7 @@ FragStealers is a PaperMC plugin for Minecraft/Paper `26.2` that lets players pr
 
 3. Save the sign.
 
-The sign will automatically change to:
+The sign automatically changes to:
 
 ```text
 [protected]
@@ -22,15 +22,49 @@ PlayerName
 
 ## Lock rules
 
-- Only the lock owner can open the protected chest or barrel.
-- No one can break the protected chest or barrel, including the owner.
+- Only the lock owner can normally open the protected chest or barrel.
+- No one can break the protected chest or barrel while its protection sign exists, including the owner.
 - The owner unlocks the container by breaking the `[protected]` sign.
 - Other players cannot break the protection sign.
 - Only the owner can edit the protection sign.
-- When the owner edits the sign, line 1 stays `[protected]` and line 2 stays the owner's name, so the protection remains clear.
-- Hoppers cannot move items into or out of protected chests or barrels.
-- Explosions and pistons cannot destroy or move protected chests/barrels/signs.
+- Owner edits preserve `[protected]` on line 1 and the owner's name on line 2.
+- Hoppers cannot move items into or out of protected storage.
+- Explosions and pistons cannot destroy or move protected containers or signs.
 - Double chests are protected as one lock.
+
+## Administrator Master Key
+
+Give yourself a Master Key with:
+
+```text
+/fs give masterkey
+```
+
+Give one to another online administrator with:
+
+```text
+/fs give masterkey PlayerName
+```
+
+The Master Key is a custom, unbreakable wooden axe marked internally with plugin persistent data. A normal wooden axe—even one renamed to match—does not work as a Master Key.
+
+While an authorized administrator holds the Master Key in their main hand:
+
+- They can open any protected chest or barrel.
+- They can break any `[protected]` sign, immediately removing that lock.
+- Their override removal is recorded in the server console with the administrator, owner, and sign location.
+- They still cannot directly break a protected chest or barrel. The protection sign must be removed first.
+
+This allows staff to correct a situation where a player has protected storage that belongs to someone else without broadly disabling storage protection.
+
+## Permissions
+
+```text
+fragstealers.masterkey.give
+fragstealers.masterkey.use
+```
+
+Both permissions default to server operators.
 
 ## Building
 
@@ -43,10 +77,10 @@ gradle build
 The compiled plugin jar will be in:
 
 ```text
-build/libs/FragStealers-1.0.1.jar
+build/libs/FragStealers-1.1.0.jar
 ```
 
-Place that jar into your server's `plugins` folder and restart the server.
+Place that jar into the server's `plugins` folder and restart the server.
 
 ## Paper API
 

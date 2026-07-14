@@ -26,6 +26,7 @@ import org.bukkit.event.inventory.InventoryMoveItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.LinkedHashSet;
@@ -36,6 +37,7 @@ public final class FragStealers extends JavaPlugin implements Listener {
     private static final PlainTextComponentSerializer PLAIN_TEXT = PlainTextComponentSerializer.plainText();
 
     private LockManager lockManager;
+    private MasterKeyManager masterKeyManager;
 
     @Override
     public void onEnable() {
@@ -43,8 +45,21 @@ public final class FragStealers extends JavaPlugin implements Listener {
 
         lockManager = new LockManager(this);
         lockManager.load();
+        masterKeyManager = new MasterKeyManager(this);
 
         getServer().getPluginManager().registerEvents(this, this);
+
+        PluginCommand fsCommand = getCommand("fragstealers");
+        if (fsCommand == null) {
+            getLogger().severe("The fragstealers command is missing from plugin.yml. Disabling plugin.");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+
+        FragStealersCommand commandHandler = new FragStealersCommand(this, masterKeyManager);
+        fsCommand.setExecutor(commandHandler);
+        fsCommand.setTabCompleter(commandHandler);
+
         getLogger().info("FragStealers enabled.");
     }
 
@@ -127,7 +142,8 @@ public final class FragStealers extends JavaPlugin implements Listener {
             return;
         }
 
-        if (lock.get().ownerUuid().equals(event.getPlayer().getUniqueId())) {
+        if (lock.get().ownerUuid().equals(event.getPlayer().getUniqueId())
+            || masterKeyManager.canUse(event.getPlayer())) {
             return;
         }
 
@@ -148,6 +164,15 @@ public final class FragStealers extends JavaPlugin implements Listener {
             if (lock.ownerUuid().equals(player.getUniqueId())) {
                 lockManager.remove(lock);
                 player.sendMessage(success(message("unlocked")));
+            } else if (masterKeyManager.canUse(player)) {
+                lockManager.remove(lock);
+                player.sendMessage(success(message("master-key-unlocked", lock)));
+                getLogger().warning(player.getName()
+                    + " used a FragStealers Master Key to remove "
+                    + lock.ownerName()
+                    + "'s protection at "
+                    + lock.signKey().serialize()
+                    + ".");
             } else {
                 event.setCancelled(true);
                 player.sendMessage(error(message("sign-break-denied", lock)));
@@ -159,7 +184,8 @@ public final class FragStealers extends JavaPlugin implements Listener {
         if (containerLock.isPresent()) {
             event.setCancelled(true);
             ChestLock lock = containerLock.get();
-            if (lock.ownerUuid().equals(player.getUniqueId())) {
+            if (lock.ownerUuid().equals(player.getUniqueId())
+                || masterKeyManager.canUse(player)) {
                 player.sendMessage(error(message("break-sign-first")));
             } else {
                 player.sendMessage(error(message("not-your-container", lock)));
@@ -286,7 +312,7 @@ public final class FragStealers extends JavaPlugin implements Listener {
         return PLAIN_TEXT.serialize(component);
     }
 
-    private String message(String key) {
+    String message(String key) {
         return getConfig().getString("messages." + key, key);
     }
 
