@@ -1,7 +1,7 @@
 package me.pinnacle.fragstealers;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextDecoration;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;

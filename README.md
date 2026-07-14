@@ -1,6 +1,6 @@
 # FragStealers
 
-FragStealers is a PaperMC plugin for Minecraft/Paper `26.2` that lets players protect chests and barrels using signs. Version `1.1.0` adds an administrator-only Master Key for resolving false or malicious ownership claims.
+FragStealers is a PaperMC plugin for Minecraft/Paper `26.2` that lets players protect chests and barrels using signs. Version `1.1.1` includes an administrator-only Master Key for resolving false or malicious ownership claims.
 
 ## Protecting storage
 
@@ -77,7 +77,7 @@ gradle build
 The compiled plugin jar will be in:
 
 ```text
-build/libs/FragStealers-1.1.0.jar
+build/libs/FragStealers-1.1.1.jar
 ```
 
 Place that jar into the server's `plugins` folder and restart the server.

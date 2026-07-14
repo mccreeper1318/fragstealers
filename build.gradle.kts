@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "me.pinnacle"
-version = "1.1.0"
+version = "1.1.1"
 
 description = "Chest and barrel protection using [fs] signs with an administrative Master Key."
 
