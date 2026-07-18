@@ -182,7 +182,7 @@ public final class ProtectionListener implements Listener {
         }
         if (!plugin.masterKeys().canUse(player)) {
             event.setCancelled(true);
-            plugin.getServer().getScheduler().runTask(plugin, player::closeInventory);
+            plugin.getServer().getScheduler().runTask(plugin, () -> player.closeInventory());
             player.sendMessage(plugin.error("Keep the Master Key in your main hand while accessing this container."));
             return;
         }
@@ -203,7 +203,7 @@ public final class ProtectionListener implements Listener {
         }
         if (!plugin.masterKeys().canUse(player)) {
             event.setCancelled(true);
-            plugin.getServer().getScheduler().runTask(plugin, player::closeInventory);
+            plugin.getServer().getScheduler().runTask(plugin, () -> player.closeInventory());
             player.sendMessage(plugin.error("Keep the Master Key in your main hand while accessing this container."));
         }
     }

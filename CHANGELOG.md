@@ -2,6 +2,7 @@
 
 ## 26.2-4
 
+- Fixed Java compilation on Paper 26.2 by replacing ambiguous scheduler method references with explicit `Runnable` lambdas.
 - Adopted Minecraft-aligned versioning: `<Minecraft version>-<plugin update number>`.
 - Pinned the project to Paper API `26.2.build.62-beta` and Java 25.
 - Added independently configurable hopper insertion and extraction for ordinary `[fs]` locks.

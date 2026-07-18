@@ -57,7 +57,7 @@ public final class MailboxListener implements Listener {
         if (holder.type() == MailboxMenuType.MAIN) {
             event.setCancelled(true);
             if (holder.adminOverride() && !plugin.masterKeys().canUse(player)) {
-                plugin.getServer().getScheduler().runTask(plugin, player::closeInventory);
+                plugin.getServer().getScheduler().runTask(plugin, () -> player.closeInventory());
                 player.sendMessage(plugin.error("Keep the Master Key in your main hand while managing this mailbox."));
                 return;
             }
@@ -69,7 +69,7 @@ public final class MailboxListener implements Listener {
         } else if (holder.type() == MailboxMenuType.PICKUP) {
             if (holder.adminOverride() && !plugin.masterKeys().canUse(player)) {
                 event.setCancelled(true);
-                plugin.getServer().getScheduler().runTask(plugin, player::closeInventory);
+                plugin.getServer().getScheduler().runTask(plugin, () -> player.closeInventory());
                 player.sendMessage(plugin.error("Keep the Master Key in your main hand while managing this mailbox."));
                 return;
             }
@@ -93,7 +93,7 @@ public final class MailboxListener implements Listener {
         }
         if (holder.type() == MailboxMenuType.PICKUP && holder.adminOverride() && !plugin.masterKeys().canUse(player)) {
             event.setCancelled(true);
-            plugin.getServer().getScheduler().runTask(plugin, player::closeInventory);
+            plugin.getServer().getScheduler().runTask(plugin, () -> player.closeInventory());
             player.sendMessage(plugin.error("Keep the Master Key in your main hand while managing this mailbox."));
             return;
         }
@@ -143,7 +143,7 @@ public final class MailboxListener implements Listener {
         if (event.getClickedInventory() != top) return;
         MailboxData mailbox = manager.bySign(holder.signKey());
         if (mailbox == null) {
-            plugin.getServer().getScheduler().runTask(plugin, player::closeInventory);
+            plugin.getServer().getScheduler().runTask(plugin, () -> player.closeInventory());
             return;
         }
         boolean manage = plugin.canManage(player, mailbox.ownerUuid());

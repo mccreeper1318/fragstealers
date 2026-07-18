@@ -103,7 +103,7 @@ public final class ShopListener implements Listener {
         if (!plugin.canManage(player, shop.ownerUuid())) {
             event.setCancelled(true);
             stockSessions.remove(player.getUniqueId());
-            plugin.getServer().getScheduler().runTask(plugin, player::closeInventory);
+            plugin.getServer().getScheduler().runTask(plugin, () -> player.closeInventory());
             player.sendMessage(plugin.error("Keep the Master Key in your main hand while managing this shop."));
             return;
         }
@@ -327,7 +327,7 @@ public final class ShopListener implements Listener {
         if (!plugin.canManage(player, shop.ownerUuid())) {
             event.setCancelled(true);
             stockSessions.remove(player.getUniqueId());
-            plugin.getServer().getScheduler().runTask(plugin, player::closeInventory);
+            plugin.getServer().getScheduler().runTask(plugin, () -> player.closeInventory());
             player.sendMessage(plugin.error("Keep the Master Key in your main hand while managing this shop."));
             return;
         }
