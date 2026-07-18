@@ -3,9 +3,9 @@ plugins {
 }
 
 group = "me.pinnacle"
-version = "1.1.1"
+version = "26.2-4"
 
-description = "Chest and barrel protection using [fs] signs with an administrative Master Key."
+description = "Unified chest locks, player shops, mailboxes, and administrative recovery tools for Paper 26.2."
 
 repositories {
     maven {
@@ -16,8 +16,7 @@ repositories {
 }
 
 dependencies {
-    // Resolves to the newest available Paper 26.2 API build at build time.
-    compileOnly("io.papermc.paper:paper-api:26.2.build.+")
+    compileOnly("io.papermc.paper:paper-api:26.2.build.62-beta")
 }
 
 java {
@@ -36,4 +35,8 @@ tasks.processResources {
     filesMatching("plugin.yml") {
         expand(props)
     }
+}
+
+tasks.jar {
+    archiveBaseName.set("FragStealers")
 }

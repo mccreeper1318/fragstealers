@@ -3,19 +3,30 @@ version: '${version}'
 main: me.pinnacle.fragstealers.FragStealers
 api-version: '26.2'
 author: Kevin
-description: Protect chests and barrels with [fs] signs and provide an admin Master Key.
+description: Unified storage locks, player shops, mailboxes, and administrative recovery tools.
 
 commands:
   fragstealers:
-    description: FragStealers administration command.
-    usage: /fs give masterkey [player]
+    description: FragStealers administration and utility commands.
+    usage: /fs [give masterkey [player]|reload]
     aliases: [fs]
-    permission: fragstealers.masterkey.give
 
 permissions:
+  fragstealers.lock.create:
+    description: Allows creation of ordinary FragStealers locks.
+    default: true
+  fragstealers.shop.create:
+    description: Allows creation of FragStealers shops.
+    default: true
+  fragstealers.mail.create:
+    description: Allows creation of FragStealers mailboxes.
+    default: true
   fragstealers.masterkey.give:
-    description: Allows an administrator to give a FragStealers Master Key.
+    description: Allows issuing FragStealers Master Keys.
     default: op
   fragstealers.masterkey.use:
-    description: Allows an administrator holding a Master Key to bypass container protection.
+    description: Allows use of FragStealers Master Keys.
+    default: op
+  fragstealers.admin.reload:
+    description: Allows reloading the FragStealers configuration.
     default: op

@@ -1,93 +1,109 @@
-# FragStealers
+# FragStealers 26.2-4
 
-FragStealers is a PaperMC plugin for Minecraft/Paper `26.2` that lets players protect chests and barrels using signs. Version `1.1.1` includes an administrator-only Master Key for resolving false or malicious ownership claims.
+FragStealers is a Paper 26.2 plugin that combines secure container locks, protected player shops, virtual mailboxes, and an administrator recovery tool.
 
-## Protecting storage
+## Requirements
 
-1. Place a sign directly on a chest or barrel, either attached to the side or placed on top.
-2. Put this on the first line:
+- Paper 26.2
+- Java 25
 
-```text
-[fs]
+## Build
+
+```bash
+./gradlew clean build
 ```
 
-3. Save the sign.
+The compiled plugin is created in `build/libs/FragStealers-26.2-4.jar`.
 
-The sign automatically changes to:
+## Ordinary storage locks
 
-```text
-[protected]
-PlayerName
+1. Attach a sign to an empty chest, trapped chest, double chest, or barrel.
+2. Enter `[fs]` on the first line.
+3. The sign becomes `[protected]` with the owner's name.
+
+Only the owner can open the container or edit/remove the sign. Nobody can break the protected container until the sign is removed. Authorized Master Key holders can open it and remove its sign.
+
+Hopper behavior for ordinary locks is controlled in `config.yml`:
+
+```yaml
+hopper-take-item: false
+hopper-put-item: true
 ```
 
-## Lock rules
+## Shops
 
-- Only the lock owner can normally open the protected chest or barrel.
-- No one can break the protected chest or barrel while its protection sign exists, including the owner.
-- The owner unlocks the container by breaking the `[protected]` sign.
-- Other players cannot break the protection sign.
-- Only the owner can edit the protection sign.
-- Owner edits preserve `[protected]` on line 1 and the owner's name on line 2.
-- Hoppers cannot move items into or out of protected storage.
-- Explosions and pistons cannot destroy or move protected containers or signs.
-- Double chests are protected as one lock.
+1. Attach a sign to an empty supported container.
+2. Enter `[fs shop]` on the first line.
+3. Right-click the sign and choose **Setup Shop**.
+4. Select the sale item and quantity, then the payment item and quantity.
 
-## Administrator Master Key
+The material selector includes an anvil search. Search accepts partial friendly names such as `oak log` and Minecraft-style names such as `oak_log`.
 
-Give yourself a Master Key with:
+Shop stock stays in the physical container. Payments are stored by the plugin in `shops.yml`. Owners and authorized Master Key holders receive the full management interface. Removing the shop sign gives stored payments to the person who removed it; items that do not fit are dropped safely.
+
+Shops can be disabled with:
+
+```yaml
+fs-shops: false
+```
+
+Existing shops remain saved. Purchases and new shop creation stop, while owners and administrators can still manage, collect, and dismantle them.
+
+## Mailboxes
+
+1. Attach a sign to an empty supported container.
+2. Enter `[fs mail]` on the first line.
+3. The sign becomes `[mail]` with the owner's name.
+
+Clicking another player's mailbox offers deposit access only. Occupied mailbox slots appear as locked red panes, while empty slots accept items. Owners and authorized Master Key holders can deposit or open pickup mode to view the real virtual inventory.
+
+Mailbox contents are stored in `mailboxes.yml`, not in the physical container. A barrel or single chest has 27 slots; a double chest has 54. Owners receive **You've Got Mail!** when an online deposit completes and once when joining while mail remains waiting.
+
+Mailboxes can be disabled with:
+
+```yaml
+fs-mail: false
+```
+
+Existing mail remains saved and can still be collected or recovered.
+
+## Master Key
 
 ```text
 /fs give masterkey
+/fs give masterkey <player>
 ```
 
-Give one to another online administrator with:
+The Master Key is an unbreakable custom wooden axe. It works only for players with `fragstealers.masterkey.use` and must be held in the main hand. It can open ordinary protected storage, access owner shop/mailbox controls, and remove protected signs. It cannot directly break a still-protected container.
+
+## Other commands
 
 ```text
-/fs give masterkey PlayerName
+/fs reload
 ```
 
-The Master Key is a custom, unbreakable wooden axe marked internally with plugin persistent data. A normal wooden axe—even one renamed to match—does not work as a Master Key.
-
-While an authorized administrator holds the Master Key in their main hand:
-
-- They can open any protected chest or barrel.
-- They can break any `[protected]` sign, immediately removing that lock.
-- Their override removal is recorded in the server console with the administrator, owner, and sign location.
-- They still cannot directly break a protected chest or barrel. The protection sign must be removed first.
-
-This allows staff to correct a situation where a player has protected storage that belongs to someone else without broadly disabling storage protection.
+Reloads `config.yml` without deleting or recreating saved protections. Missing settings from newer versions are merged into existing configurations without replacing values you already changed.
 
 ## Permissions
 
 ```text
-fragstealers.masterkey.give
-fragstealers.masterkey.use
+fragstealers.lock.create       default: true
+fragstealers.shop.create       default: true
+fragstealers.mail.create       default: true
+fragstealers.masterkey.give    default: op
+fragstealers.masterkey.use     default: op
+fragstealers.admin.reload      default: op
 ```
 
-Both permissions default to server operators.
-
-## Building
-
-Requires Java 25+.
-
-```bash
-gradle build
-```
-
-The compiled plugin jar will be in:
+## Data files
 
 ```text
-build/libs/FragStealers-1.1.1.jar
+plugins/FragStealers/
+├── config.yml
+├── locks.yml
+├── shops.yml
+├── mailboxes.yml
+└── audit-log.yml
 ```
 
-Place that jar into the server's `plugins` folder and restart the server.
-
-## Paper API
-
-This project uses:
-
-```kotlin
-compileOnly("io.papermc.paper:paper-api:26.2.build.+")
-```
-
-That resolves the newest available Paper `26.2` API build when Gradle builds the project.
+Master Key administrative removals and item withdrawals are recorded in `audit-log.yml`. Entries older than 30 days are purged automatically.

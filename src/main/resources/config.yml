@@ -1,30 +1,16 @@
-# FragStealers
-# Players lock a chest or barrel by placing a sign on it and entering [fs] on line 1.
-# The sign will be changed to:
-# [protected]
-# PlayerName
-#
-# Administrators with the appropriate permissions can use:
-# /fs give masterkey [player]
-#
-# The Master Key is a custom wooden axe. While held in the main hand, it can open
-# any protected chest/barrel and break any protection sign. It does not directly
-# break a container while that container is still protected.
+# Ordinary [fs] locks only:
+# false prevents hoppers and hopper minecarts from extracting items.
+hopper-take-item: false
 
-messages:
-  lock-created: "Container protected. Break the [protected] sign to unlock it."
-  sign-must-touch-container: "FragStealers signs must be attached to a chest or barrel."
-  already-protected: "That container is already protected."
-  not-your-container: "This container is protected by {owner}."
-  break-sign-first: "Break the [protected] sign first to unlock this container."
-  sign-break-denied: "Only {owner} can break this protection sign."
-  sign-edit-denied: "Only {owner} can edit this protection sign."
-  sign-edited: "Protection sign updated."
-  unlocked: "Container protection removed."
-  master-key-unlocked: "Master Key removed {owner}'s container protection."
-  no-command-permission: "You do not have permission to use this command."
-  master-key-usage: "Usage: /fs give masterkey [player]"
-  master-key-console-target: "Console must specify an online player: /fs give masterkey <player>"
-  player-not-found: "Player {player} is not online."
-  master-key-received: "You received a FragStealers Master Key."
-  master-key-given: "Gave a FragStealers Master Key to {player}."
+# true allows hoppers and hopper minecarts to insert items.
+hopper-put-item: true
+
+# Enables creation and customer use of [fs shop] shops.
+# When disabled, existing shops remain saved and owners/admins can still manage,
+# collect payments, and remove them.
+fs-shops: true
+
+# Enables creation and deposits for [fs mail] mailboxes.
+# When disabled, existing mailbox data remains saved and owners/admins can still
+# collect mail and remove mailboxes.
+fs-mail: true
