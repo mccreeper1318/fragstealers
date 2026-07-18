@@ -156,6 +156,8 @@ public final class ShopManager {
         }
     }
 
+    public List<ShopData> all() { return List.copyOf(new LinkedHashSet<>(bySign.values())); }
+
     public int count() { return bySign.size(); }
 
     private void register(ShopData shop) {

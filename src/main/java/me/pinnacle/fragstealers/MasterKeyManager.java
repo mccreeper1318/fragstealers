@@ -51,6 +51,12 @@ public final class MasterKeyManager {
         return player.hasPermission(USE_PERMISSION) && isMasterKey(player.getInventory().getItemInMainHand());
     }
 
+    public boolean canUseInEitherHand(Player player) {
+        return player.hasPermission(USE_PERMISSION)
+            && (isMasterKey(player.getInventory().getItemInMainHand())
+                || isMasterKey(player.getInventory().getItemInOffHand()));
+    }
+
     private Component noItalic(Component component) {
         return component.decoration(TextDecoration.ITALIC, false);
     }

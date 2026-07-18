@@ -9,6 +9,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Sign;
@@ -416,16 +417,51 @@ public final class ProtectionListener implements Listener {
             player.sendMessage(plugin.error("You do not have permission to create mailboxes."));
             return;
         }
+
+        UUID ownerUuid = player.getUniqueId();
+        String ownerName = player.getName();
+        boolean delegated = false;
+        String requestedOwner = plain(event.line(1)).trim();
+
+        if (!requestedOwner.isEmpty() && !requestedOwner.equalsIgnoreCase(player.getName())) {
+            if (!plugin.masterKeys().canUseInEitherHand(player)) {
+                event.setCancelled(true);
+                player.sendMessage(plugin.error("Only an authorized administrator holding a Master Key in either hand can create a mailbox for another player."));
+                return;
+            }
+
+            OfflinePlayer target = plugin.getServer().getPlayerExact(requestedOwner);
+            if (target == null) {
+                target = plugin.getServer().getOfflinePlayerIfCached(requestedOwner);
+            }
+            if (target == null || target.getName() == null) {
+                event.setCancelled(true);
+                player.sendMessage(plugin.error("Player '" + requestedOwner + "' is not known to this server. Check the spelling and make sure they have joined before."));
+                return;
+            }
+
+            ownerUuid = target.getUniqueId();
+            ownerName = target.getName();
+            delegated = true;
+        }
+
         Set<BlockKey> keys = new LinkedHashSet<>();
         for (Block block : containers) keys.add(BlockKey.from(block));
-        MailboxData mailbox = new MailboxData(BlockKey.from(sign), keys, player.getUniqueId(), player.getName());
+        MailboxData mailbox = new MailboxData(BlockKey.from(sign), keys, ownerUuid, ownerName);
         plugin.mailboxes().add(mailbox);
         event.line(0, Component.text("[mail]"));
-        event.line(1, Component.text(player.getName()));
+        event.line(1, Component.text(ownerName));
         event.line(2, Component.empty());
         event.line(3, Component.empty());
         plugin.getServer().getScheduler().runTask(plugin, () -> updateMailboxSign(mailbox));
-        player.sendMessage(plugin.success("Mailbox created."));
+
+        if (delegated) {
+            plugin.audit().log(player, "CREATED_MAILBOX_FOR_PLAYER", ProtectionType.MAILBOX,
+                ownerUuid, ownerName, mailbox.signKey(), "Created a mailbox on behalf of " + ownerName + ".");
+            player.sendMessage(plugin.success("Mailbox created for " + ownerName + "."));
+        } else {
+            player.sendMessage(plugin.success("Mailbox created."));
+        }
     }
 
     private void updateMailboxSign(MailboxData mailbox) {

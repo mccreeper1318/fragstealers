@@ -48,6 +48,7 @@ public final class FragStealers extends JavaPlugin {
 
         shopMenus = new ShopMenuService(this, shops);
         mailboxMenus = new MailboxMenuService(this, mailboxes);
+        shops.all().forEach(shopMenus::updateSign);
 
         getServer().getPluginManager().registerEvents(new ProtectionListener(this), this);
         getServer().getPluginManager().registerEvents(new ShopListener(this, shops, shopMenus), this);

@@ -10,6 +10,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
 import org.bukkit.block.sign.Side;
@@ -19,6 +20,7 @@ import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,10 +41,12 @@ public final class ShopMenuService {
 
     private final FragStealers plugin;
     private final ShopManager manager;
+    private final NamespacedKey searchQueryKey;
 
     public ShopMenuService(FragStealers plugin, ShopManager manager) {
         this.plugin = plugin;
         this.manager = manager;
+        this.searchQueryKey = new NamespacedKey(plugin, "shop_search_query");
     }
 
     public void openMain(Player player, ShopData shop) {
@@ -124,15 +128,38 @@ public final class ShopMenuService {
         ShopSearchHolder holder = new ShopSearchHolder(signKey, returnType, adminOverride);
         Inventory inventory = Bukkit.createInventory(holder, InventoryType.ANVIL, Component.text("Search Shop Items"));
         holder.inventory(inventory);
-        inventory.setItem(0, namedItem(Material.PAPER, "Type item name", NamedTextColor.AQUA,
-            List.of(Component.text("Example: diamond, oak log, ingot", NamedTextColor.GRAY))));
+        inventory.setItem(0, namedItem(Material.PAPER, " ", NamedTextColor.AQUA,
+            List.of(
+                Component.text("Type an item name in the field above.", NamedTextColor.GRAY),
+                Component.text("Example: diamond, oak log, ingot", NamedTextColor.GRAY)
+            )));
         player.openInventory(inventory);
     }
 
     public ItemStack searchResult(String query) {
-        String shown = query == null || query.isBlank() ? "Show All Items" : "Search: " + query;
-        return namedItem(Material.COMPASS, shown, NamedTextColor.GREEN,
+        String cleanedQuery = cleanSearchQuery(query);
+        String shown = cleanedQuery.isBlank() ? "Show All Items" : "Search: " + cleanedQuery;
+        ItemStack result = namedItem(Material.COMPASS, shown, NamedTextColor.GREEN,
             List.of(Component.text("Click the result to search.", NamedTextColor.GRAY)));
+        ItemMeta meta = result.getItemMeta();
+        meta.getPersistentDataContainer().set(searchQueryKey, PersistentDataType.STRING, cleanedQuery);
+        result.setItemMeta(meta);
+        return result;
+    }
+
+    public String searchQuery(ItemStack result) {
+        if (result == null || result.getType() != Material.COMPASS || !result.hasItemMeta()) {
+            return null;
+        }
+        return result.getItemMeta().getPersistentDataContainer().get(searchQueryKey, PersistentDataType.STRING);
+    }
+
+    public String cleanSearchQuery(String query) {
+        if (query == null) {
+            return "";
+        }
+        String cleaned = query.strip();
+        return cleaned.equalsIgnoreCase("Type item name") ? "" : cleaned;
     }
 
     public void openAmountPicker(Player player, ShopData shop, ShopMenuType type, Material material, int page) {
@@ -265,11 +292,11 @@ public final class ShopMenuService {
         if (shop.isConfigured()) {
             side.line(2, Component.text(ItemCatalog.display(shop.sellMaterial()) + " x" + shop.sellAmount(), NamedTextColor.GREEN));
             side.line(3, Component.text(ItemCatalog.display(shop.priceMaterial()) + " x" + shop.priceAmount(), NamedTextColor.RED));
-            side.setGlowingText(true);
         } else {
             side.line(2, Component.text("Not configured", NamedTextColor.YELLOW));
             side.line(3, Component.text("Right-click setup", NamedTextColor.GRAY));
         }
+        side.setGlowingText(false);
         sign.setWaxed(true);
         sign.update(true, false);
     }

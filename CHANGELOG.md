@@ -1,5 +1,14 @@
 # FragStealers Changelog
 
+## 26.2-5
+
+- Added delegated mailbox creation for authorized administrators holding a Master Key in either hand.
+- Administrators can write `[fs mail]` on line 1 and a known player's name on line 2 to create the mailbox under that player's UUID.
+- Added an audit-log entry whenever an administrator creates a mailbox for another player.
+- Improved the shop anvil search so the input starts visually blank, the confirmed result stores the exact query, and result clicks no longer depend on a potentially stale rename field.
+- Set anvil repair limits before creating the search result to prevent the result from being cleared by vanilla anvil calculations.
+- Removed glowing text from created and refreshed shop signs while retaining green sale-item text and red price-item text.
+
 ## 26.2-4
 
 - Fixed Java compilation on Paper 26.2 by replacing ambiguous scheduler method references with explicit `Runnable` lambdas.
@@ -10,7 +19,7 @@
 - Integrated PinnacleShop functionality directly into FragStealers.
 - Shops are now created with `[fs shop]`.
 - Added an anvil-based material search that supports partial friendly and namespaced item names.
-- Added colored, glowing shop signs for easier sale-item and price-item identification.
+- Added colored shop signs with green sale-item text and red price-item text.
 - Added full Master Key access to shop owner controls and shop-sign removal.
 - Added payment return when a shop sign is removed; overflow drops safely at the breaker.
 - Added `shops.yml` for shop records and stored payments.

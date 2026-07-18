@@ -67,7 +67,10 @@ public final class ShopListener implements Listener {
                 return;
             }
             if (event.getRawSlot() == 2) {
-                String query = event.getView() instanceof AnvilView anvilView ? anvilView.getRenameText() : "";
+                String query = menus.searchQuery(event.getCurrentItem());
+                if (query == null) {
+                    return;
+                }
                 plugin.getServer().getScheduler().runTask(plugin,
                     () -> menus.openItemPicker(player, holder.signKey(), holder.returnType(), 0, query));
             }
@@ -124,9 +127,10 @@ public final class ShopListener implements Listener {
             return;
         }
         AnvilView anvilView = event.getView();
-        String query = anvilView.getRenameText();
-        event.setResult(menus.searchResult(query));
+        String query = menus.cleanSearchQuery(anvilView.getRenameText());
         anvilView.setRepairCost(0);
+        anvilView.setMaximumRepairCost(Integer.MAX_VALUE);
+        event.setResult(menus.searchResult(query));
     }
 
     @EventHandler
