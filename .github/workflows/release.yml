@@ -60,9 +60,30 @@ jobs:
             VERSION="${VERSION#v}"
           fi
 
-          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+-[0-9]+$ ]]; then
+          # Stable examples: 26.2-6
+          # Prerelease examples: 26.2-6-beta.1, 26.2-6-rc.2
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+-[0-9]+(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$ ]]; then
             echo "Invalid FragStealers release tag: $RAW_TAG"
-            echo "Expected a tag such as 26.2-6, v26.2-6, or v.26.2-6."
+            echo "Expected a tag such as 26.2-6, 26.2-6-beta.1, v26.2-6, or v26.2-6-beta.1."
+            exit 1
+          fi
+
+          TAG_IS_PRERELEASE=false
+          if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+-[0-9]+- ]]; then
+            TAG_IS_PRERELEASE=true
+          fi
+
+          RELEASE_IS_PRERELEASE="$(
+            gh release view "$RAW_TAG" \
+              --json isPrerelease \
+              --jq '.isPrerelease'
+          )"
+
+          if [[ "$TAG_IS_PRERELEASE" != "$RELEASE_IS_PRERELEASE" ]]; then
+            echo "The tag version and GitHub release type do not match."
+            echo "Tag: $RAW_TAG"
+            echo "Tag indicates prerelease: $TAG_IS_PRERELEASE"
+            echo "GitHub release is prerelease: $RELEASE_IS_PRERELEASE"
             exit 1
           fi
 
@@ -87,7 +108,9 @@ jobs:
 
           echo "tag=$RAW_TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$TAG_IS_PRERELEASE" >> "$GITHUB_OUTPUT"
           echo "FragStealers version: $VERSION"
+          echo "Prerelease: $TAG_IS_PRERELEASE"
 
       - name: Build plugin
         run: ./gradlew --no-daemon clean build
