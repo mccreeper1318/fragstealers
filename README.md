@@ -1,4 +1,4 @@
-# FragStealers 26.2-5
+# FragStealers 26.2-6
 
 FragStealers is a Paper 26.2 plugin that combines secure container locks, protected player shops, virtual mailboxes, and an administrator recovery tool.
 
@@ -13,7 +13,7 @@ FragStealers is a Paper 26.2 plugin that combines secure container locks, protec
 ./gradlew clean build
 ```
 
-The compiled plugin is created in `build/libs/FragStealers-26.2-5.jar`.
+The compiled plugin is created in `build/libs/FragStealers-26.2-6.jar`.
 
 ## Ordinary storage locks
 
@@ -37,7 +37,7 @@ hopper-put-item: true
 3. Right-click the sign and choose **Setup Shop**.
 4. Select the sale item and quantity, then the payment item and quantity.
 
-The material selector includes an anvil search. Search accepts partial friendly names such as `oak log` and Minecraft-style names such as `oak_log`. The result button stores the exact entered query so the search remains consistent when confirmed.
+The material selector includes an anvil search. Search accepts partial friendly names such as `oak log` and Minecraft-style names such as `oak_log`. FragStealers actively refreshes the synthetic anvil result while it is open, so the result compass remains available even when vanilla anvil processing does not fire. The result button stores the exact entered query so the search remains consistent when confirmed.
 
 Shop signs retain colored text for readability: the sale item is green and the payment item is red. The text does not glow.
 
@@ -97,27 +97,3 @@ The Master Key is an unbreakable custom wooden axe. It works only for players wi
 ```
 
 Reloads `config.yml` without deleting or recreating saved protections. Missing settings from newer versions are merged into existing configurations without replacing values you already changed.
-
-## Permissions
-
-```text
-fragstealers.lock.create       default: true
-fragstealers.shop.create       default: true
-fragstealers.mail.create       default: true
-fragstealers.masterkey.give    default: op
-fragstealers.masterkey.use     default: op
-fragstealers.admin.reload      default: op
-```
-
-## Data files
-
-```text
-plugins/FragStealers/
-├── config.yml
-├── locks.yml
-├── shops.yml
-├── mailboxes.yml
-└── audit-log.yml
-```
-
-Master Key administrative mailbox creation, removals, and item withdrawals are recorded in `audit-log.yml`. Entries older than 30 days are purged automatically.
