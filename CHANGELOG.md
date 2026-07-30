@@ -15,6 +15,7 @@
 - Release automation now verifies that prerelease-suffixed tags are published as GitHub prereleases and stable tags are published as normal releases.
 - Fixed prerelease builds so `build.gradle.kts` remains at the base version, such as `26.2-6`, while the workflow temporarily applies the full release tag, such as `26.2-6-beta.1`, to the Actions build workspace.
 - Prerelease JAR filenames and embedded `plugin.yml` versions now use the complete prerelease tag without requiring a permanent source-version change.
+- Added push-triggered prerelease publishing from `agent/**` branches using a `[prerelease VERSION]` commit-message marker, allowing beta builds before the workflow reaches `main`.
 
 ## 26.2-5
 
