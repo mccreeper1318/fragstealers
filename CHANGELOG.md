@@ -7,6 +7,10 @@
 - The search result compass is now restored whenever the synthetic anvil interface clears it.
 - Search confirmation continues to use the exact query stored on the result item.
 - Search refresh tasks stop automatically when the inventory closes or the player disconnects.
+- Added GitHub Actions build validation for pushes, development branches, pull requests, and manual runs.
+- Added automated release packaging when a GitHub Release is published.
+- Release automation verifies the project version, packaged `plugin.yml`, and packaged `config.yml` before uploading.
+- GitHub Releases now receive the compiled plugin JAR and a SHA-256 checksum automatically.
 
 ## 26.2-5
 
