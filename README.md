@@ -105,7 +105,9 @@ The repository includes two GitHub Actions workflows:
 - `.github/workflows/build.yml` compiles and verifies the plugin on pushes to `main`, pushes to `agent/**` branches, pull requests, and manual runs. The verified JAR is saved as a workflow artifact.
 - `.github/workflows/release.yml` runs when a GitHub Release is published. It checks out the release tag, builds with Java 25, verifies the packaged `plugin.yml` and `config.yml`, and attaches the plugin JAR plus its SHA-256 checksum to the release.
 
-Before publishing a release, make sure the version in `build.gradle.kts` matches the normalized release tag. The following tag styles are accepted:
+Before publishing a release, make sure the version in `build.gradle.kts` matches the normalized release tag exactly.
+
+Stable tags may use any of these styles:
 
 ```text
 26.2-6
@@ -113,11 +115,28 @@ v26.2-6
 v.26.2-6
 ```
 
-For example, when `build.gradle.kts` contains `version = "26.2-6"`, publish a GitHub Release using one of the tags above. The workflow uploads:
+Prerelease tags may add a dot-separated suffix:
 
 ```text
-FragStealers-26.2-6.jar
-FragStealers-26.2-6.jar.sha256
+26.2-6-beta.1
+26.2-6-alpha.2
+26.2-6-rc.1
+v26.2-6-beta.1
+```
+
+A prerelease tag must be published as a GitHub **prerelease**. A stable tag must be published as a normal GitHub release. The workflow stops if the tag type and GitHub release type do not match.
+
+For example, when `build.gradle.kts` contains:
+
+```kotlin
+version = "26.2-6-beta.1"
+```
+
+publish a GitHub prerelease tagged `26.2-6-beta.1`. The workflow uploads:
+
+```text
+FragStealers-26.2-6-beta.1.jar
+FragStealers-26.2-6-beta.1.jar.sha256
 ```
 
 The release workflow can also be run manually from the Actions tab for an existing GitHub Release tag.
