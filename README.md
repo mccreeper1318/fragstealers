@@ -139,4 +139,14 @@ FragStealers-26.2-6-beta.1.jar.sha256
 
 The source file is not changed by the workflow. Stable releases continue to require a tag matching the base version exactly.
 
-The release workflow can also be run manually from the Actions tab for an existing GitHub Release tag.
+The release workflow can also be run manually from the Actions tab for an existing GitHub Release tag after the workflow has been merged into the default branch.
+
+### Building a prerelease before merging
+
+A push-triggered build can publish a prerelease directly from an `agent/**` development branch. Put a marker in the commit message using this format:
+
+```text
+[prerelease 26.2-6-beta.1]
+```
+
+The branch build validates that the base project version is `26.2-6`, confirms that `26.2-6-beta.1` already exists as a GitHub prerelease, temporarily builds the full prerelease version, and uploads the JAR and checksum to that release. Normal branch commits continue to produce ordinary build artifacts only.
