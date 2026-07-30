@@ -13,6 +13,8 @@
 - GitHub Releases now receive the compiled plugin JAR and a SHA-256 checksum automatically.
 - Added prerelease tag support such as `26.2-6-beta.1`, `26.2-6-alpha.2`, and `26.2-6-rc.1`.
 - Release automation now verifies that prerelease-suffixed tags are published as GitHub prereleases and stable tags are published as normal releases.
+- Fixed prerelease builds so `build.gradle.kts` remains at the base version, such as `26.2-6`, while the workflow temporarily applies the full release tag, such as `26.2-6-beta.1`, to the Actions build workspace.
+- Prerelease JAR filenames and embedded `plugin.yml` versions now use the complete prerelease tag without requiring a permanent source-version change.
 
 ## 26.2-5
 
