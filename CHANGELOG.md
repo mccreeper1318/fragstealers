@@ -11,6 +11,8 @@
 - Added automated release packaging when a GitHub Release is published.
 - Release automation verifies the project version, packaged `plugin.yml`, and packaged `config.yml` before uploading.
 - GitHub Releases now receive the compiled plugin JAR and a SHA-256 checksum automatically.
+- Added prerelease tag support such as `26.2-6-beta.1`, `26.2-6-alpha.2`, and `26.2-6-rc.1`.
+- Release automation now verifies that prerelease-suffixed tags are published as GitHub prereleases and stable tags are published as normal releases.
 
 ## 26.2-5
 
