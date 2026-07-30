@@ -1,5 +1,13 @@
 # FragStealers Changelog
 
+## 26.2-6
+
+- Fixed issue #1 where the shop anvil search could open without ever producing a clickable result.
+- Added a dedicated search refresh listener that reads the active anvil rename text every tick while the FragStealers search menu is open.
+- The search result compass is now restored whenever the synthetic anvil interface clears it.
+- Search confirmation continues to use the exact query stored on the result item.
+- Search refresh tasks stop automatically when the inventory closes or the player disconnects.
+
 ## 26.2-5
 
 - Added delegated mailbox creation for authorized administrators holding a Master Key in either hand.
