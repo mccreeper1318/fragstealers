@@ -8,6 +8,7 @@ import me.pinnacle.fragstealers.mail.MailboxListener;
 import me.pinnacle.fragstealers.mail.MailboxMenuService;
 import me.pinnacle.fragstealers.shop.ShopListener;
 import me.pinnacle.fragstealers.shop.ShopMenuService;
+import me.pinnacle.fragstealers.shop.ShopSearchRefreshListener;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.block.Block;
@@ -52,6 +53,7 @@ public final class FragStealers extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(new ProtectionListener(this), this);
         getServer().getPluginManager().registerEvents(new ShopListener(this, shops, shopMenus), this);
+        getServer().getPluginManager().registerEvents(new ShopSearchRefreshListener(this, shopMenus), this);
         getServer().getPluginManager().registerEvents(new MailboxListener(this, mailboxes, mailboxMenus), this);
 
         PluginCommand command = getCommand("fragstealers");
