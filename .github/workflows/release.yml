@@ -62,14 +62,16 @@ jobs:
 
           # Stable examples: 26.2-6
           # Prerelease examples: 26.2-6-beta.1, 26.2-6-rc.2
-          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+-[0-9]+(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$ ]]; then
+          if [[ "$VERSION" =~ ^([0-9]+\.[0-9]+-[0-9]+)(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$ ]]; then
+            BASE_VERSION="${BASH_REMATCH[1]}"
+          else
             echo "Invalid FragStealers release tag: $RAW_TAG"
             echo "Expected a tag such as 26.2-6, 26.2-6-beta.1, v26.2-6, or v26.2-6-beta.1."
             exit 1
           fi
 
           TAG_IS_PRERELEASE=false
-          if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+-[0-9]+- ]]; then
+          if [[ "$VERSION" != "$BASE_VERSION" ]]; then
             TAG_IS_PRERELEASE=true
           fi
 
@@ -99,18 +101,63 @@ jobs:
             exit 1
           fi
 
-          if [[ "$PROJECT_VERSION" != "$VERSION" ]]; then
-            echo "Release tag version does not match the Gradle project version."
-            echo "Tag version:     $VERSION"
+          if [[ "$PROJECT_VERSION" != "$BASE_VERSION" ]]; then
+            echo "Release tag base version does not match the Gradle project version."
+            echo "Release version: $VERSION"
+            echo "Base version:    $BASE_VERSION"
             echo "Project version: $PROJECT_VERSION"
             exit 1
           fi
 
           echo "tag=$RAW_TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "base_version=$BASE_VERSION" >> "$GITHUB_OUTPUT"
           echo "prerelease=$TAG_IS_PRERELEASE" >> "$GITHUB_OUTPUT"
-          echo "FragStealers version: $VERSION"
+          echo "FragStealers release version: $VERSION"
+          echo "FragStealers source version:  $PROJECT_VERSION"
           echo "Prerelease: $TAG_IS_PRERELEASE"
+
+      - name: Apply release version to Gradle build
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          python3 - "$VERSION" <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          version = sys.argv[1]
+          path = pathlib.Path("build.gradle.kts")
+          content = path.read_text(encoding="utf-8")
+          pattern = re.compile(r'(?m)^([ \t]*)version[ \t]*=[ \t]*"[^"]+"[ \t]*$')
+          updated, count = pattern.subn(
+              lambda match: f'{match.group(1)}version = "{version}"',
+              content,
+              count=1,
+          )
+
+          if count != 1:
+              raise SystemExit("Could not apply the release version to build.gradle.kts.")
+
+          path.write_text(updated, encoding="utf-8")
+          PY
+
+          APPLIED_VERSION="$(
+            sed -nE \
+              's/^[[:space:]]*version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' \
+              build.gradle.kts \
+              | head -n 1
+          )"
+
+          if [[ "$APPLIED_VERSION" != "$VERSION" ]]; then
+            echo "Failed to apply the release version to the Gradle build."
+            echo "Expected: $VERSION"
+            echo "Applied:  $APPLIED_VERSION"
+            exit 1
+          fi
+
+          echo "Gradle release version: $APPLIED_VERSION"
 
       - name: Build plugin
         run: ./gradlew --no-daemon clean build
