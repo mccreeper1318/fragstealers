@@ -97,3 +97,27 @@ The Master Key is an unbreakable custom wooden axe. It works only for players wi
 ```
 
 Reloads `config.yml` without deleting or recreating saved protections. Missing settings from newer versions are merged into existing configurations without replacing values you already changed.
+
+## Automated builds and releases
+
+The repository includes two GitHub Actions workflows:
+
+- `.github/workflows/build.yml` compiles and verifies the plugin on pushes to `main`, pushes to `agent/**` branches, pull requests, and manual runs. The verified JAR is saved as a workflow artifact.
+- `.github/workflows/release.yml` runs when a GitHub Release is published. It checks out the release tag, builds with Java 25, verifies the packaged `plugin.yml` and `config.yml`, and attaches the plugin JAR plus its SHA-256 checksum to the release.
+
+Before publishing a release, make sure the version in `build.gradle.kts` matches the normalized release tag. The following tag styles are accepted:
+
+```text
+26.2-6
+v26.2-6
+v.26.2-6
+```
+
+For example, when `build.gradle.kts` contains `version = "26.2-6"`, publish a GitHub Release using one of the tags above. The workflow uploads:
+
+```text
+FragStealers-26.2-6.jar
+FragStealers-26.2-6.jar.sha256
+```
+
+The release workflow can also be run manually from the Actions tab for an existing GitHub Release tag.
