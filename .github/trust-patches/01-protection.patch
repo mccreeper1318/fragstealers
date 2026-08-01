@@ -1,0 +1,160 @@
+--- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/ProtectionListener.java	2026-07-18 21:53:44.000000000 +0000
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/ProtectionListener.java	2026-08-01 21:49:31.262368162 +0000
+@@ -51,7 +51,7 @@
+     private static final PlainTextComponentSerializer PLAIN = PlainTextComponentSerializer.plainText();
+     private static final BlockFace[] HORIZONTAL = {BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST};
+     private final FragStealers plugin;
+-    private final Map<UUID, MasterLockSession> masterLockViews = new HashMap<>();
++    private final Map<UUID, LockViewSession> lockViews = new HashMap<>();
+ 
+     public ProtectionListener(FragStealers plugin) {
+         this.plugin = plugin;
+@@ -136,7 +136,7 @@
+         Block block = event.getClickedBlock();
+         ChestLock lock = plugin.locks().byContainer(block).orElse(null);
+         if (lock != null) {
+-            if (lock.isOwner(event.getPlayer().getUniqueId()) || plugin.masterKeys().canUse(event.getPlayer())) return;
++            if (plugin.canAccessLock(event.getPlayer(), lock)) return;
+             denyInteraction(event);
+             event.getPlayer().sendMessage(plugin.error("This container is protected by " + lock.ownerName() + "."));
+             return;
+@@ -160,7 +160,11 @@
+         ChestLock lock = lockForInventory(event.getInventory());
+         if (lock == null) return;
+         if (lock.isOwner(player.getUniqueId())) {
+-            masterLockViews.remove(player.getUniqueId());
++            lockViews.remove(player.getUniqueId());
++            return;
++        }
++        if (plugin.trust().has(ProtectionType.LOCK, lock.signKey(), player.getUniqueId(), TrustLevel.ACCESS)) {
++            lockViews.put(player.getUniqueId(), new LockViewSession(lock.signKey(), false, new ItemStack[0]));
+             return;
+         }
+         if (!plugin.masterKeys().canUse(player)) {
+@@ -168,54 +172,60 @@
+             player.sendMessage(plugin.error("This container is protected by " + lock.ownerName() + "."));
+             return;
+         }
+-        masterLockViews.put(player.getUniqueId(), new MasterLockSession(lock.signKey(), cloneContents(event.getInventory().getContents())));
++        lockViews.put(player.getUniqueId(), new LockViewSession(lock.signKey(), true,
++            cloneContents(event.getInventory().getContents())));
+     }
+ 
+     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+     public void onLockInventoryClick(InventoryClickEvent event) {
+         if (!(event.getWhoClicked() instanceof Player player)) return;
+-        MasterLockSession session = masterLockViews.get(player.getUniqueId());
++        LockViewSession session = lockViews.get(player.getUniqueId());
+         if (session == null) return;
+         ChestLock lock = lockForInventory(event.getView().getTopInventory());
+         if (lock == null || !lock.signKey().equals(session.signKey())) {
+-            masterLockViews.remove(player.getUniqueId());
++            lockViews.remove(player.getUniqueId());
+             return;
+         }
+-        if (!plugin.masterKeys().canUse(player)) {
++        if (!lockSessionAuthorized(player, lock, session)) {
+             event.setCancelled(true);
++            lockViews.remove(player.getUniqueId());
+             plugin.getServer().getScheduler().runTask(plugin, () -> player.closeInventory());
+-            player.sendMessage(plugin.error("Keep the Master Key in your main hand while accessing this container."));
++            player.sendMessage(plugin.error("You no longer have access to this protected container."));
+             return;
+         }
+-        plugin.getServer().getScheduler().runTask(plugin, () -> {
+-            if (!plugin.masterKeys().canUse(player)) player.closeInventory();
+-        });
++        if (session.masterOverride()) {
++            plugin.getServer().getScheduler().runTask(plugin, () -> {
++                if (!plugin.masterKeys().canUse(player)) player.closeInventory();
++            });
++        }
+     }
+ 
+     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+     public void onLockInventoryDrag(InventoryDragEvent event) {
+         if (!(event.getWhoClicked() instanceof Player player)) return;
+-        MasterLockSession session = masterLockViews.get(player.getUniqueId());
++        LockViewSession session = lockViews.get(player.getUniqueId());
+         if (session == null) return;
+         ChestLock lock = lockForInventory(event.getView().getTopInventory());
+         if (lock == null || !lock.signKey().equals(session.signKey())) {
+-            masterLockViews.remove(player.getUniqueId());
++            lockViews.remove(player.getUniqueId());
+             return;
+         }
+-        if (!plugin.masterKeys().canUse(player)) {
++        if (!lockSessionAuthorized(player, lock, session)) {
+             event.setCancelled(true);
++            lockViews.remove(player.getUniqueId());
+             plugin.getServer().getScheduler().runTask(plugin, () -> player.closeInventory());
+-            player.sendMessage(plugin.error("Keep the Master Key in your main hand while accessing this container."));
++            player.sendMessage(plugin.error("You no longer have access to this protected container."));
+         }
+     }
+ 
+     @EventHandler
+     public void onLockInventoryClose(InventoryCloseEvent event) {
+         if (!(event.getPlayer() instanceof Player player)) return;
+-        MasterLockSession session = masterLockViews.remove(player.getUniqueId());
++        LockViewSession session = lockViews.remove(player.getUniqueId());
+         if (session == null) return;
+         ChestLock lock = plugin.locks().bySign(session.signKey()).orElse(null);
+         if (lock == null) return;
++        if (!session.masterOverride()) return;
+         String details = ItemUtil.summarizeDifference(session.before(), event.getInventory().getContents());
+         if (!details.equals("No items removed")) {
+             plugin.audit().log(player, "WITHDREW_LOCK_ITEMS", ProtectionType.LOCK, lock.ownerUuid(), lock.ownerName(), lock.signKey(), details);
+@@ -224,7 +234,7 @@
+ 
+     @EventHandler
+     public void onQuit(PlayerQuitEvent event) {
+-        masterLockViews.remove(event.getPlayer().getUniqueId());
++        lockViews.remove(event.getPlayer().getUniqueId());
+     }
+ 
+     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+@@ -240,6 +250,7 @@
+                 return;
+             }
+             plugin.locks().remove(lockSign);
++            plugin.trust().clear(ProtectionType.LOCK, lockSign.signKey());
+             if (!lockSign.isOwner(player.getUniqueId())) {
+                 plugin.audit().log(player, "REMOVED_LOCK", ProtectionType.LOCK, lockSign.ownerUuid(), lockSign.ownerName(), lockSign.signKey(), "Master Key override");
+             }
+@@ -261,6 +272,7 @@
+                 shopSign.removeEarnings(payments);
+             }
+             plugin.shops().remove(shopSign);
++            plugin.trust().clear(ProtectionType.SHOP, shopSign.signKey());
+             if (!shopSign.isOwner(player.getUniqueId())) {
+                 plugin.audit().log(player, "REMOVED_SHOP", ProtectionType.SHOP, shopSign.ownerUuid(), shopSign.ownerName(), shopSign.signKey(),
+                     "Payments returned to administrator: " + payments);
+@@ -282,6 +294,7 @@
+             mailboxSign.clear();
+             ItemUtil.giveOrDrop(player, mail);
+             plugin.mailboxes().remove(mailboxSign);
++            plugin.trust().clear(ProtectionType.MAILBOX, mailboxSign.signKey());
+             if (!mailboxSign.isOwner(player.getUniqueId())) {
+                 plugin.audit().log(player, "REMOVED_MAILBOX", ProtectionType.MAILBOX, mailboxSign.ownerUuid(), mailboxSign.ownerName(), mailboxSign.signKey(),
+                     "Returned " + mail.size() + " mail stack(s) to administrator");
+@@ -476,6 +489,10 @@
+         sign.update(true, false);
+     }
+ 
++    private boolean lockSessionAuthorized(Player player, ChestLock lock, LockViewSession session) {
++        return session.masterOverride() ? plugin.masterKeys().canUse(player) : plugin.canAccessLock(player, lock);
++    }
++
+     private ItemStack[] cloneContents(ItemStack[] contents) {
+         ItemStack[] copy = new ItemStack[contents.length];
+         for (int i = 0; i < contents.length; i++) {
+@@ -528,7 +545,7 @@
+         return text.replaceAll("\\s+", " ");
+     }
+ 
+-    private record MasterLockSession(BlockKey signKey, ItemStack[] before) {
++    private record LockViewSession(BlockKey signKey, boolean masterOverride, ItemStack[] before) {
+     }
+ 
+     private record ProtectedRef(ProtectionType type, Object record, UUID ownerUuid, String ownerName) {
