@@ -1,0 +1,68 @@
+--- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopMenuService.java	2026-07-18 21:40:09.000000000 +0000
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopMenuService.java	2026-08-01 21:46:56.194363071 +0000
+@@ -50,13 +50,15 @@
+     }
+ 
+     public void openMain(Player player, ShopData shop) {
+-        boolean manage = plugin.canManage(player, shop.ownerUuid());
+-        ShopMenuHolder holder = new ShopMenuHolder(shop.signKey(), ShopMenuType.MAIN, manage && !shop.isOwner(player.getUniqueId()));
++        boolean manage = plugin.canManageShop(player, shop);
++        boolean restock = plugin.canRestockShop(player, shop);
++        ShopMenuHolder holder = new ShopMenuHolder(shop.signKey(), ShopMenuType.MAIN,
++            plugin.isMasterOverride(player, shop.ownerUuid()));
+         Inventory inventory = Bukkit.createInventory(holder, 27, Component.text("FragStealers Shop"));
+         holder.inventory(inventory);
+         fill(inventory, Material.GRAY_STAINED_GLASS_PANE);
+ 
+-        if (!plugin.shopsEnabled() && !manage) {
++        if (!plugin.shopsEnabled() && !restock) {
+             inventory.setItem(13, namedItem(Material.BARRIER, "Shops Temporarily Disabled", NamedTextColor.RED,
+                 List.of(Component.text("Purchases are disabled by the server.", NamedTextColor.GRAY))));
+             player.openInventory(inventory);
+@@ -83,6 +85,10 @@
+                 List.of(Component.text("Stock only: " + ItemCatalog.display(shop.sellMaterial()), NamedTextColor.GRAY))));
+             inventory.setItem(OWNER_COLLECT_SLOT, namedItem(Material.GOLD_INGOT, "Collect Payments", NamedTextColor.RED,
+                 List.of(Component.text("Stored: " + shop.earnings() + " " + ItemCatalog.display(shop.priceMaterial()), NamedTextColor.GRAY))));
++        } else if (restock) {
++            inventory.setItem(OWNER_STOCK_SLOT, namedItem(Material.CHEST, "Restock Shop", NamedTextColor.GREEN,
++                List.of(Component.text("You may add " + ItemCatalog.display(shop.sellMaterial()) + " but cannot remove stock.", NamedTextColor.GRAY))));
++            inventory.setItem(CLOSE_SLOT, namedItem(Material.RED_STAINED_GLASS_PANE, "Close", NamedTextColor.RED, List.of()));
+         } else {
+             inventory.setItem(BUY_SLOT, namedItem(Material.LIME_STAINED_GLASS_PANE, "Buy Item", NamedTextColor.GREEN,
+                 List.of(
+@@ -100,7 +106,7 @@
+         int safePage = Math.max(0, Math.min(page, maxPage));
+         String title = type == ShopMenuType.SELECT_SELL_ITEM ? "Choose Item to Sell" : "Choose Price Item";
+         ShopData shop = manager.bySign(signKey);
+-        boolean adminOverride = shop != null && !shop.isOwner(player.getUniqueId()) && plugin.canManage(player, shop.ownerUuid());
++        boolean adminOverride = shop != null && plugin.isMasterOverride(player, shop.ownerUuid());
+         ShopMenuHolder holder = new ShopMenuHolder(signKey, type, safePage, query, adminOverride);
+         Inventory inventory = Bukkit.createInventory(holder, 54, Component.text(title));
+         holder.inventory(inventory);
+@@ -124,7 +130,7 @@
+ 
+     public void openSearch(Player player, BlockKey signKey, ShopMenuType returnType) {
+         ShopData shop = manager.bySign(signKey);
+-        boolean adminOverride = shop != null && !shop.isOwner(player.getUniqueId()) && plugin.canManage(player, shop.ownerUuid());
++        boolean adminOverride = shop != null && plugin.isMasterOverride(player, shop.ownerUuid());
+         ShopSearchHolder holder = new ShopSearchHolder(signKey, returnType, adminOverride);
+         Inventory inventory = Bukkit.createInventory(holder, InventoryType.ANVIL, Component.text("Search Shop Items"));
+         holder.inventory(inventory);
+@@ -168,7 +174,7 @@
+         int safePage = Math.max(0, Math.min(page, maxPage));
+         String title = type == ShopMenuType.SELECT_SELL_AMOUNT ? "Choose Sell Quantity" : "Choose Price Quantity";
+         ShopMenuHolder holder = new ShopMenuHolder(shop.signKey(), type, safePage, "",
+-            !shop.isOwner(player.getUniqueId()) && plugin.canManage(player, shop.ownerUuid()));
++            plugin.isMasterOverride(player, shop.ownerUuid()));
+         Inventory inventory = Bukkit.createInventory(holder, 54, Component.text(title));
+         holder.inventory(inventory);
+         int start = safePage * PAGE_SIZE;
+@@ -188,7 +194,7 @@
+ 
+     public void openConfirm(Player player, ShopData shop, Material sell, int sellAmount, Material price, int priceAmount) {
+         ShopMenuHolder holder = new ShopMenuHolder(shop.signKey(), ShopMenuType.CONFIRM_SETUP,
+-            !shop.isOwner(player.getUniqueId()) && plugin.canManage(player, shop.ownerUuid()));
++            plugin.isMasterOverride(player, shop.ownerUuid()));
+         Inventory inventory = Bukkit.createInventory(holder, 27, Component.text("Confirm Shop Setup"));
+         holder.inventory(inventory);
+         fill(inventory, Material.GRAY_STAINED_GLASS_PANE);
