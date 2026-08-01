@@ -102,7 +102,7 @@ public final class MailboxMenuService {
             player.sendMessage(plugin.error("This mailbox is currently receiving mail. Try again shortly."));
             return;
         }
-        UUID viewer = activePickup.get(mailbox.signKey();
+        UUID viewer = activePickup.get(mailbox.signKey());
         if (viewer != null && !viewer.equals(player.getUniqueId())) {
             player.sendMessage(plugin.error("This mailbox is already being checked."));
             return;
