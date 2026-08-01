@@ -1,6 +1,6 @@
 # FragStealers Changelog
 
-## 26.2-6
+## 26.2-6-beta.2
 
 ### Added
 
@@ -16,11 +16,6 @@
 - Added access-level mailbox collection through a restricted pickup view.
 - Added manage-level mailbox-content controls.
 - Added automatic trust-entry cleanup when a lock, shop, or mailbox protection is removed.
-- Added a dedicated shop-search refresh listener that reads the active anvil rename text while the search is open.
-- Added GitHub Actions validation builds for `main`, `agent/**` branches, pull requests, and manual runs.
-- Added automated GitHub Release packaging with the compiled JAR and a SHA-256 checksum.
-- Added stable and prerelease tag support, including tags such as `26.2-6-beta.1`, `26.2-6-alpha.2`, and `26.2-6-rc.1`.
-- Added push-triggered prerelease publishing from `agent/**` branches through a `[prerelease VERSION]` commit-message marker.
 
 ### Changed
 
@@ -29,19 +24,12 @@
 - Changed access-level trusted shop sessions to accept only the configured sale material.
 - Changed access-level trusted mailbox pickup sessions to allow collection while blocking insertion and rearrangement.
 - Changed active lock, shop, and mailbox sessions to recheck authorization so revoked trust is enforced without waiting for a reconnect.
-- Changed shop-search confirmation to use the exact query stored on the result compass instead of rereading a potentially stale anvil field.
-- Changed the anvil search input item to use a visually blank name with instructions in its lore.
-- Changed release validation to compare prerelease tags against the base version in `build.gradle.kts`.
-- Changed prerelease builds to apply the full prerelease version only inside the Actions workspace, leaving the source version at its stable base value.
-- Changed release validation to verify the JAR filename, embedded `plugin.yml` version, and required resource files before upload.
+- Changed the Gradle build to prepare the trusted-access source overlay before Java compilation.
 
 ### Fixed
 
-- Fixed issue #1 where the shop anvil search could open without producing a clickable result.
-- Fixed synthetic anvil searches not reliably firing `PrepareAnvilEvent` by actively restoring the result compass when the rename query changes or vanilla clears the result slot.
-- Fixed search results becoming inconsistent when the clicked compass and current rename text briefly differed.
-- Fixed prerelease builds failing when a tag such as `26.2-6-beta.1` was used while the project source remained at `26.2-6`.
 - Fixed hotbar move-and-readd actions not being included in protected shop and mailbox inventory safeguards.
+- Fixed the `26.2-6-beta.2` build failing because `MailboxMenuService` was missing a closing parenthesis when reading the active mailbox viewer.
 
 ### Security
 
@@ -60,10 +48,41 @@
 - Added installation, configuration, commands, permissions, data-file, trust-level, shop, mailbox, Master Key, and audit-log documentation.
 - Removed repository-development and automated-build instructions from the public-facing README.
 - Reorganized the changelog into Added, Changed, Fixed, Security, Documentation, and Build and Release categories.
+- Split the `26.2-6` prerelease history into separate `26.2-6-beta.1` and `26.2-6-beta.2` sections.
 
 ### Build and Release
 
-- Builds use Java 25 and the pinned Paper API `26.2.build.62-beta`.
+- Builds continue to use Java 25 and the pinned Paper API `26.2.build.62-beta`.
+- Added build-time preparation of the trusted-access source overlay before `compileJava`.
+- Kept the project source version at the stable base version `26.2-6`, allowing prerelease workflows to apply the full beta version only inside the build workspace.
+
+## 26.2-6-beta.1
+
+### Added
+
+- Added a dedicated shop-search refresh listener that reads the active anvil rename text while the search is open.
+- Added GitHub Actions validation builds for `main`, `agent/**` branches, pull requests, and manual runs.
+- Added automated GitHub Release packaging with the compiled JAR and a SHA-256 checksum.
+- Added stable and prerelease tag support, including tags such as `26.2-6-beta.1`, `26.2-6-alpha.2`, and `26.2-6-rc.1`.
+- Added push-triggered prerelease publishing from `agent/**` branches through a `[prerelease VERSION]` commit-message marker.
+
+### Changed
+
+- Changed shop-search confirmation to use the exact query stored on the result compass instead of rereading a potentially stale anvil field.
+- Changed the anvil search input item to use a visually blank name with instructions in its lore.
+- Changed release validation to compare prerelease tags against the base version in `build.gradle.kts`.
+- Changed prerelease builds to apply the full prerelease version only inside the Actions workspace, leaving the source version at its stable base value.
+- Changed release validation to verify the JAR filename, embedded `plugin.yml` version, and required resource files before upload.
+
+### Fixed
+
+- Fixed issue #1 where the shop anvil search could open without producing a clickable result.
+- Fixed synthetic anvil searches not reliably firing `PrepareAnvilEvent` by actively restoring the result compass when the rename query changes or vanilla clears the result slot.
+- Fixed search results becoming inconsistent when the clicked compass and current rename text briefly differed.
+- Fixed prerelease builds failing when a tag such as `26.2-6-beta.1` was used while the project source remained at `26.2-6`.
+
+### Build and Release
+
 - Development builds verify that exactly one FragStealers JAR is produced and that it contains `plugin.yml` and `config.yml`.
 - Release builds generate `FragStealers-<version>.jar` and `FragStealers-<version>.jar.sha256`.
 - Release automation accepts `26.2-6`, `v26.2-6`, `v.26.2-6`, and supported prerelease equivalents.
