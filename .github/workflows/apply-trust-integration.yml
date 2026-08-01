@@ -1,0 +1,139 @@
+name: Apply Trusted Player Access
+
+on:
+  push:
+    branches:
+      - agent/26.2-6-dev
+    paths:
+      - .github/workflows/apply-trust-integration.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out development branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/26.2-6-dev
+          fetch-depth: 0
+
+      - name: Apply trusted-player code patches
+        shell: bash
+        run: |
+          set -euo pipefail
+          for patch_file in .github/trust-patches/*.patch; do
+            echo "Applying $patch_file"
+            patch -p2 --forward --batch < "$patch_file"
+          done
+
+      - name: Update permissions and documentation
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              file = Path(path)
+              text = file.read_text(encoding="utf-8")
+              if text.count(old) != 1:
+                  raise SystemExit(f"Expected exactly one match in {path}: {old!r}")
+              file.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          replace_once(
+              "src/main/resources/plugin.yml",
+              "    usage: /fs [give masterkey [player]|reload]",
+              "    usage: /fs [trust <player> [access|manage]|untrust <player>|trusted|give masterkey [player]|reload]",
+          )
+          replace_once(
+              "src/main/resources/plugin.yml",
+              "  fragstealers.masterkey.give:\n",
+              "  fragstealers.trust.manage:\n"
+              "    description: Allows owners to manage trusted players on their FragStealers protections.\n"
+              "    default: true\n"
+              "  fragstealers.masterkey.give:\n",
+          )
+
+          trust_section = """## Trusted player access
+
+Protection owners can grant another known player access while looking directly at the protected sign or container within six blocks:
+
+```text
+/fs trust <player> [access|manage]
+/fs untrust <player>
+/fs trusted
+```
+
+The default level is `access`. Trust is stored by UUID in `trusted-players.yml` and applies only to the selected lock, shop, or mailbox.
+
+- **Locks:** both levels can open and use the protected container.
+- **Shops:** `access` can add valid stock but cannot remove stock or collect payments; `manage` receives the full shop-management interface.
+- **Mailboxes:** `access` can collect existing mail through a read-only pickup view; `manage` can fully manage mailbox contents.
+
+Trusted players cannot edit or remove the protection sign, break the protected container, or change the trust list. Those actions remain owner-only, except for existing Master Key administrator recovery powers.
+
+"""
+          replace_once(
+              "README.md",
+              "```\n\n## Shops\n",
+              "```\n\n" + trust_section + "## Shops\n",
+          )
+          replace_once(
+              "README.md",
+              "Shop stock stays in the physical container. Payments are stored by the plugin in `shops.yml`. Owners and authorized Master Key holders receive the full management interface.",
+              "Shop stock stays in the physical container. Payments are stored by the plugin in `shops.yml`. Owners, manage-level trusted players, and authorized Master Key holders receive the full management interface; access-level trusted players receive a restock-only view.",
+          )
+          replace_once(
+              "README.md",
+              "Owners and authorized Master Key holders can deposit or open pickup mode to view the real virtual inventory.",
+              "Owners, trusted players, and authorized Master Key holders can collect mail. Access-level trusted players receive a read-only pickup view, while manage-level trust grants full mailbox-content management.",
+          )
+
+          changelog_bullets = """- Added per-protection trusted-player access stored by UUID in `trusted-players.yml`.
+- Added `/fs trust <player> [access|manage]`, `/fs untrust <player>`, and `/fs trusted` while looking at an owned protection.
+- Added access-level lock use, shop restocking, and read-only mailbox collection.
+- Added manage-level shop and mailbox content controls without granting sign removal or trust-list ownership.
+- Added live authorization checks so revoked trust closes or restricts active inventories safely.
+- Trust entries are removed automatically when their protection sign is removed.
+"""
+          replace_once(
+              "CHANGELOG.md",
+              "## 26.2-6\n\n",
+              "## 26.2-6\n\n" + changelog_bullets,
+          )
+          PY
+
+      - name: Remove one-time staging files
+        run: |
+          rm -rf .github/trust-patches
+          rm -f .github/workflows/apply-trust-integration.yml
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build and verify
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon clean build
+          test -f build/libs/FragStealers-26.2-6.jar
+          jar tf build/libs/FragStealers-26.2-6.jar | grep -qx plugin.yml
+          jar tf build/libs/FragStealers-26.2-6.jar | grep -qx config.yml
+
+      - name: Commit completed feature
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Add trusted player access"
+          git push origin HEAD:agent/26.2-6-dev
