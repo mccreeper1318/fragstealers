@@ -2,7 +2,7 @@ name: Temporary Trusted Access Integration
 
 on:
   issues:
-    types: [opened]
+    types: [opened, edited]
 
 permissions:
   contents: write
