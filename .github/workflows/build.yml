@@ -62,7 +62,7 @@ jobs:
           RELEASE_TAG=""
           PUBLISH_PRERELEASE=false
 
-          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+          if [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF" == refs/heads/agent/* ]]; then
             COMMIT_MESSAGE="$(git log -1 --pretty=%B)"
 
             if [[ "$COMMIT_MESSAGE" =~ \[prerelease[[:space:]]+([0-9]+\.[0-9]+-[0-9]+-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)\] ]]; then

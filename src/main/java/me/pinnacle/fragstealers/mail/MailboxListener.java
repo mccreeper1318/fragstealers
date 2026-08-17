@@ -80,7 +80,8 @@ public final class MailboxListener implements Listener {
                 player.sendMessage(plugin.error("Keep the Master Key in your main hand while managing this mailbox."));
                 return;
             }
-            enforcePickup(event, player, holder, top);
+            boolean readOnly = holder.pickupReadOnly() || !plugin.canManageMailbox(player, mailbox);
+            enforcePickup(event, player, top, readOnly);
             if (holder.adminOverride()) {
                 plugin.getServer().getScheduler().runTask(plugin, () -> {
                     if (!plugin.masterKeys().canUse(player)) player.closeInventory();
@@ -106,18 +107,18 @@ public final class MailboxListener implements Listener {
                 player.sendMessage(plugin.error("You no longer have permission to collect from this mailbox."));
                 return;
             }
-        }
-        if (holder.type() == MailboxMenuType.PICKUP && holder.adminOverride() && !plugin.masterKeys().canUse(player)) {
-            event.setCancelled(true);
-            plugin.getServer().getScheduler().runTask(plugin, () -> player.closeInventory());
-            player.sendMessage(plugin.error("Keep the Master Key in your main hand while managing this mailbox."));
-            return;
-        }
-        if (holder.type() == MailboxMenuType.PICKUP && holder.pickupReadOnly()
-            && event.getRawSlots().stream().anyMatch(slot -> slot < top.getSize())) {
-            event.setCancelled(true);
-            player.sendMessage(plugin.error("Access-level trust allows collecting mail but not adding or rearranging it."));
-            return;
+            if (holder.adminOverride() && !plugin.masterKeys().canUse(player)) {
+                event.setCancelled(true);
+                plugin.getServer().getScheduler().runTask(plugin, () -> player.closeInventory());
+                player.sendMessage(plugin.error("Keep the Master Key in your main hand while managing this mailbox."));
+                return;
+            }
+            if ((holder.pickupReadOnly() || !plugin.canManageMailbox(player, mailbox))
+                && event.getRawSlots().stream().anyMatch(slot -> slot < top.getSize())) {
+                event.setCancelled(true);
+                player.sendMessage(plugin.error("Access-level trust allows collecting mail but not adding or rearranging it."));
+                return;
+            }
         }
         if (plugin.masterKeys().isMasterKey(event.getOldCursor())) {
             event.setCancelled(true);
@@ -209,11 +210,11 @@ public final class MailboxListener implements Listener {
         }
     }
 
-    private void enforcePickup(InventoryClickEvent event, Player player, MailboxMenuHolder holder, Inventory top) {
+    private void enforcePickup(InventoryClickEvent event, Player player, Inventory top, boolean readOnly) {
         int raw = event.getRawSlot();
         boolean topSlot = raw >= 0 && raw < top.getSize();
 
-        if (holder.pickupReadOnly()) {
+        if (readOnly) {
             boolean movingIntoTop = (!topSlot && event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY)
                 || (topSlot && (event.getAction() == InventoryAction.PLACE_ALL
                     || event.getAction() == InventoryAction.PLACE_ONE

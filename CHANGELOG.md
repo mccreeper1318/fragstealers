@@ -1,5 +1,20 @@
 # FragStealers Changelog
 
+## 26.2-6-rc.1
+
+### Fixed
+
+- Fixed issue #6 where a player who opened mailbox pickup with manage-level trust could keep adding or rearranging mail after being downgraded to access-level trust.
+- Fixed issue #7 where a `[prerelease VERSION]` marker on a `main` branch commit could publish or replace prerelease assets.
+
+### Security
+
+- Changed active mailbox pickup sessions to recheck manage-level authorization on every inventory click and drag, immediately enforcing read-only access after a trust downgrade.
+
+### Build and Release
+
+- Restricted commit-message prerelease publishing to push events whose branch ref matches `agent/**`; pushes to `main`, pull requests, and manual workflow runs remain build-only.
+
 ## 26.2-6-beta.2
 
 ### Added
