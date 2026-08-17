@@ -82,7 +82,8 @@ public final class ShopSearchRefreshListener implements Listener {
                     return;
                 }
 
-                if (holder.adminOverride() && !plugin.masterKeys().canUse(player)) {
+                if (holder.adminOverride() && !plugin.masterKeys().canUse(player)
+                    && !plugin.canManageShop(player, holder.signKey())) {
                     finish(playerId);
                     player.closeInventory();
                     player.sendMessage(plugin.error("Keep the Master Key in your main hand while managing this shop."));

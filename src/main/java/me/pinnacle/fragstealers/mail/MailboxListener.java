@@ -56,7 +56,8 @@ public final class MailboxListener implements Listener {
 
         if (holder.type() == MailboxMenuType.MAIN) {
             event.setCancelled(true);
-            if (holder.adminOverride() && !plugin.masterKeys().canUse(player)) {
+            if (holder.adminOverride() && !plugin.masterKeys().canUse(player)
+                && !plugin.canCollectMailbox(player, holder.signKey())) {
                 plugin.getServer().getScheduler().runTask(plugin, () -> player.closeInventory());
                 player.sendMessage(plugin.error("Keep the Master Key in your main hand while managing this mailbox."));
                 return;
@@ -74,17 +75,12 @@ public final class MailboxListener implements Listener {
                 player.sendMessage(plugin.error("You no longer have permission to collect from this mailbox."));
                 return;
             }
-            if (holder.adminOverride() && !plugin.masterKeys().canUse(player)) {
-                event.setCancelled(true);
-                plugin.getServer().getScheduler().runTask(plugin, () -> player.closeInventory());
-                player.sendMessage(plugin.error("Keep the Master Key in your main hand while managing this mailbox."));
-                return;
-            }
             boolean readOnly = holder.pickupReadOnly() || !plugin.canManageMailbox(player, mailbox);
             enforcePickup(event, player, top, readOnly);
             if (holder.adminOverride()) {
                 plugin.getServer().getScheduler().runTask(plugin, () -> {
-                    if (!plugin.masterKeys().canUse(player)) player.closeInventory();
+                    if (!plugin.masterKeys().canUse(player)
+                        && !plugin.canCollectMailbox(player, holder.signKey())) player.closeInventory();
                 });
             }
         }
@@ -105,12 +101,6 @@ public final class MailboxListener implements Listener {
                 event.setCancelled(true);
                 plugin.getServer().getScheduler().runTask(plugin, () -> player.closeInventory());
                 player.sendMessage(plugin.error("You no longer have permission to collect from this mailbox."));
-                return;
-            }
-            if (holder.adminOverride() && !plugin.masterKeys().canUse(player)) {
-                event.setCancelled(true);
-                plugin.getServer().getScheduler().runTask(plugin, () -> player.closeInventory());
-                player.sendMessage(plugin.error("Keep the Master Key in your main hand while managing this mailbox."));
                 return;
             }
             if ((holder.pickupReadOnly() || !plugin.canManageMailbox(player, mailbox))
@@ -220,6 +210,7 @@ public final class MailboxListener implements Listener {
                     || event.getAction() == InventoryAction.PLACE_ONE
                     || event.getAction() == InventoryAction.PLACE_SOME
                     || event.getAction() == InventoryAction.SWAP_WITH_CURSOR
+                    || event.getAction() == InventoryAction.CLONE_STACK
                     || isHotbarAction(event.getAction())));
             if (movingIntoTop) {
                 event.setCancelled(true);

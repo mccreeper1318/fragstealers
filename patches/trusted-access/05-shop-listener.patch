@@ -116,8 +116,8 @@
 +    }
 +
 +    private boolean stockAuthorized(Player player, ShopData shop, StockSession session) {
-+        if (session.adminOverride()) {
-+            return plugin.masterKeys().canUse(player);
++        if (session.adminOverride() && plugin.masterKeys().canUse(player)) {
++            return true;
 +        }
 +        return session.mode() == StockMode.FULL
 +            ? plugin.canManageShop(player, shop)

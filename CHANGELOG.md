@@ -1,5 +1,23 @@
 # FragStealers Changelog
 
+## 26.2-6-rc.2
+
+### Changed
+
+- Changed active shop and mailbox sessions opened with a Master Key to fall back to the player's current independent trust level when the key is removed.
+- Changed shop fallback authorization to require access-level trust for the main restocking menu and manage-level trust for setup, payment collection, and full stock management.
+- Changed mailbox fallback authorization to preserve access-level collection while dynamically enforcing read-only restrictions whenever manage-level authorization is absent.
+
+### Fixed
+
+- Fixed issue #8 where an access-level trusted player in Creative mode could duplicate mailbox items by using middle-click clone-stack actions in a read-only pickup view.
+- Fixed issue #9 where independently trusted players were disconnected from shop or mailbox sessions after putting away a Master Key, even when their trust level still authorized the current action.
+
+### Security
+
+- Blocked `CLONE_STACK` actions against read-only mailbox pickup inventories while continuing to allow legitimate mail collection.
+- Continued closing Master Key sessions when the player has neither the key nor the trust level required by the active shop or mailbox view.
+
 ## 26.2-6-rc.1
 
 ### Fixed

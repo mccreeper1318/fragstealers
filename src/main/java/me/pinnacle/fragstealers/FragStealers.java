@@ -118,16 +118,31 @@ public final class FragStealers extends JavaPlugin {
             || trust.has(ProtectionType.SHOP, shop.signKey(), player.getUniqueId(), TrustLevel.ACCESS);
     }
 
+    public boolean canRestockShop(Player player, BlockKey signKey) {
+        ShopData shop = shops.bySign(signKey);
+        return shop != null && canRestockShop(player, shop);
+    }
+
     public boolean canManageShop(Player player, ShopData shop) {
         return shop.isOwner(player.getUniqueId())
             || masterKeys.canUse(player)
             || trust.has(ProtectionType.SHOP, shop.signKey(), player.getUniqueId(), TrustLevel.MANAGE);
     }
 
+    public boolean canManageShop(Player player, BlockKey signKey) {
+        ShopData shop = shops.bySign(signKey);
+        return shop != null && canManageShop(player, shop);
+    }
+
     public boolean canCollectMailbox(Player player, MailboxData mailbox) {
         return mailbox.isOwner(player.getUniqueId())
             || masterKeys.canUse(player)
             || trust.has(ProtectionType.MAILBOX, mailbox.signKey(), player.getUniqueId(), TrustLevel.ACCESS);
+    }
+
+    public boolean canCollectMailbox(Player player, BlockKey signKey) {
+        MailboxData mailbox = mailboxes.bySign(signKey);
+        return mailbox != null && canCollectMailbox(player, mailbox);
     }
 
     public boolean canManageMailbox(Player player, MailboxData mailbox) {
