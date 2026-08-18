@@ -42,16 +42,16 @@ public final class MailboxMenuService {
     }
 
     public void openMain(Player player, MailboxData mailbox) {
-        boolean manage = plugin.canManage(player, mailbox.ownerUuid());
+        boolean manage = plugin.canManageMailbox(player, mailbox);
+        boolean collect = plugin.canCollectMailbox(player, mailbox);
         MailboxMenuHolder holder = new MailboxMenuHolder(mailbox.signKey(), MailboxMenuType.MAIN, null, null,
-            manage && !mailbox.isOwner(player.getUniqueId()));
+            plugin.isMasterOverride(player, mailbox.ownerUuid()));
         Inventory inventory = Bukkit.createInventory(holder, 27, Component.text("Mailbox: " + mailbox.ownerName()));
         holder.inventory(inventory);
         fill(inventory);
 
         if (!plugin.mailEnabled()) {
-            if (manage) {
-                inventory.setItem(OWNER_DEPOSIT_SLOT, item(Material.BARRIER, "Deposits Temporarily Disabled", NamedTextColor.RED));
+            if (collect) {
                 inventory.setItem(OWNER_PICKUP_SLOT, item(Material.CHEST, "Pick Up Mail", NamedTextColor.AQUA));
             } else {
                 inventory.setItem(PUBLIC_DEPOSIT_SLOT, item(Material.BARRIER, "Mailboxes Temporarily Disabled", NamedTextColor.RED));
@@ -59,6 +59,9 @@ public final class MailboxMenuService {
         } else if (manage) {
             inventory.setItem(OWNER_DEPOSIT_SLOT, item(Material.HOPPER, "Deposit Mail", NamedTextColor.GREEN));
             inventory.setItem(OWNER_PICKUP_SLOT, item(Material.CHEST, "Pick Up Mail", NamedTextColor.AQUA));
+        } else if (collect) {
+            inventory.setItem(OWNER_DEPOSIT_SLOT, item(Material.HOPPER, "Deposit Mail", NamedTextColor.GREEN));
+            inventory.setItem(OWNER_PICKUP_SLOT, item(Material.CHEST, "Collect Trusted Mail", NamedTextColor.AQUA));
         } else {
             inventory.setItem(PUBLIC_DEPOSIT_SLOT, item(Material.HOPPER, "Deposit Mail", NamedTextColor.GREEN));
         }
@@ -90,8 +93,8 @@ public final class MailboxMenuService {
     }
 
     public void openPickup(Player player, MailboxData mailbox) {
-        if (!plugin.canManage(player, mailbox.ownerUuid())) {
-            player.sendMessage(plugin.error("Only the mailbox owner can collect this mail."));
+        if (!plugin.canCollectMailbox(player, mailbox)) {
+            player.sendMessage(plugin.error("Only the mailbox owner or a trusted player can collect this mail."));
             return;
         }
         Set<UUID> depositors = activeDeposits.get(mailbox.signKey());
@@ -106,8 +109,9 @@ public final class MailboxMenuService {
         }
         activePickup.put(mailbox.signKey(), player.getUniqueId());
         ItemStack[] before = mailbox.copyContents();
+        boolean readOnly = !plugin.canManageMailbox(player, mailbox);
         MailboxMenuHolder holder = new MailboxMenuHolder(mailbox.signKey(), MailboxMenuType.PICKUP, null, before,
-            !mailbox.isOwner(player.getUniqueId()));
+            plugin.isMasterOverride(player, mailbox.ownerUuid()), readOnly);
         Inventory inventory = Bukkit.createInventory(holder, mailbox.capacity(), Component.text("Pick Up Mail"));
         holder.inventory(inventory);
         inventory.setContents(before);

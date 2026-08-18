@@ -61,7 +61,7 @@ public final class ShopListener implements Listener {
         Inventory top = event.getView().getTopInventory();
         if (top.getHolder() instanceof ShopSearchHolder holder) {
             event.setCancelled(true);
-            if (holder.adminOverride() && !plugin.masterKeys().canUse(player)) {
+            if (holder.adminOverride() && !plugin.masterKeys().canUse(player) && !plugin.canManageShop(player, holder.signKey())) {
                 later(player::closeInventory);
                 player.sendMessage(plugin.error("Keep the Master Key in your main hand while managing this shop."));
                 return;
@@ -78,7 +78,7 @@ public final class ShopListener implements Listener {
         }
         if (top.getHolder() instanceof ShopMenuHolder holder) {
             event.setCancelled(true);
-            if (holder.adminOverride() && !plugin.masterKeys().canUse(player)) {
+            if (holder.adminOverride() && !plugin.masterKeys().canUse(player) && !(holder.type() == ShopMenuType.MAIN ? plugin.canRestockShop(player, holder.signKey()) : plugin.canManageShop(player, holder.signKey()))) {
                 later(player::closeInventory);
                 player.sendMessage(plugin.error("Keep the Master Key in your main hand while managing this shop."));
                 return;
@@ -379,7 +379,7 @@ public final class ShopListener implements Listener {
     private void postCheckMasterKey(Player player, StockSession session) {
         if (!session.adminOverride()) return;
         plugin.getServer().getScheduler().runTask(plugin, () -> {
-            if (!plugin.masterKeys().canUse(player)) player.closeInventory();
+            if (!plugin.masterKeys().canUse(player) && (manager.bySign(session.signKey()) == null || !stockAuthorized(player, manager.bySign(session.signKey()), session))) player.closeInventory();
         });
     }
 

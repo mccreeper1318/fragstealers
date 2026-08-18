@@ -1,115 +1,225 @@
-# FragStealers 26.2-5
+# FragStealers 26.2-6
 
-FragStealers is a Paper 26.2 plugin that combines secure container locks, protected player shops, virtual mailboxes, and an administrator recovery tool.
+FragStealers is a Paper plugin for protecting player storage, operating secure container shops, sending items through virtual mailboxes, sharing controlled access with trusted players, and giving administrators a logged recovery tool.
 
 ## Requirements
 
 - Paper 26.2
 - Java 25
 
-## Build
+## Installation
 
-```bash
-./gradlew clean build
-```
+1. Stop the server.
+2. Place `FragStealers-26.2-6.jar` in the server's `plugins` folder.
+3. Start the server.
+4. Review `plugins/FragStealers/config.yml`.
 
-The compiled plugin is created in `build/libs/FragStealers-26.2-5.jar`.
+When updating from an older version, keep the existing FragStealers data files. New settings and data files are created without replacing existing configuration values.
+
+## Supported containers
+
+FragStealers supports:
+
+- Chests
+- Trapped chests
+- Double chests
+- Barrels
+
+A container must be empty before it can become a lock, shop, or mailbox. A container cannot be registered as more than one FragStealers type.
 
 ## Ordinary storage locks
 
-1. Attach a sign to an empty chest, trapped chest, double chest, or barrel.
+To protect a container:
+
+1. Attach a sign directly to the side of the container, or place a standing sign directly above it.
 2. Enter `[fs]` on the first line.
-3. The sign becomes `[protected]` with the owner's name.
+3. Finish editing the sign.
 
-Only the owner can open the container or edit/remove the sign. Nobody can break the protected container until the sign is removed. Authorized Master Key holders can open it and remove its sign.
+The sign changes to:
 
-Hopper behavior for ordinary locks is controlled in `config.yml`:
+```text
+[protected]
+PlayerName
+```
+
+The owner can open the container and remove the protection sign. Trusted players can open the container according to the trust system. Authorized Master Key holders can open the container and remove its sign for administrative recovery.
+
+The protected container cannot be broken until its protection sign is removed.
+
+### Hopper settings
+
+The following settings apply only to ordinary `[fs]` locks:
 
 ```yaml
 hopper-take-item: false
 hopper-put-item: true
 ```
 
-## Shops
+- `hopper-take-item` controls extraction by hoppers and hopper minecarts.
+- `hopper-put-item` controls insertion by hoppers and hopper minecarts.
+- Shops and mailboxes always block hopper access.
+
+## Trusted player access
+
+Protection owners can grant access to individual players while looking directly at their protected sign or container within six blocks.
+
+```text
+/fs trust <player> [access|manage]
+/fs untrust <player>
+/fs trusted
+```
+
+The target player must already be known to the server. Trust is stored by UUID in `trusted-players.yml`, so name changes do not transfer access to another account.
+
+### Access levels
+
+| Protection | `access` | `manage` |
+|---|---|---|
+| Ordinary lock | Open and use the container | Same as `access` |
+| Shop | Add valid stock only | Add or remove stock, collect payments, and configure an unconfigured shop |
+| Mailbox | Deposit and collect mail through a restricted pickup view | Fully manage mailbox contents |
+
+Trusted players cannot:
+
+- Remove or edit the protection sign
+- Break the protected container
+- Add another chest half to the protection
+- Change the protection's trust list
+
+Only the protection owner can change trusted players. Master Key administrators cannot change another player's trust list. Removing a protection automatically deletes its trust entries.
+
+## Player shops
+
+To create a shop:
 
 1. Attach a sign to an empty supported container.
 2. Enter `[fs shop]` on the first line.
-3. Right-click the sign and choose **Setup Shop**.
-4. Select the sale item and quantity, then the payment item and quantity.
+3. Right-click the completed shop sign.
+4. Select the item being sold and its quantity.
+5. Select the payment item and its quantity.
+6. Confirm the setup.
 
-The material selector includes an anvil search. Search accepts partial friendly names such as `oak log` and Minecraft-style names such as `oak_log`. The result button stores the exact entered query so the search remains consistent when confirmed.
+Shop stock remains in the physical container. Collected payments are stored in `shops.yml` until the owner, a manage-level trusted player, or an authorized Master Key holder collects them.
 
-Shop signs retain colored text for readability: the sale item is green and the payment item is red. The text does not glow.
+### Item selection and search
 
-Shop stock stays in the physical container. Payments are stored by the plugin in `shops.yml`. Owners and authorized Master Key holders receive the full management interface. Removing the shop sign gives stored payments to the person who removed it; items that do not fit are dropped safely.
+The item selector includes an anvil search field. It supports partial friendly names and Minecraft-style names, including:
 
-Shops can be disabled with:
+```text
+diamond
+oak log
+oak_log
+ingot
+```
+
+Leaving the search blank shows the full item catalog.
+
+### Shop signs
+
+Configured shop signs display:
+
+- The sale item in green
+- The payment item in red
+- Colored text without a glow effect
+
+### Disabling shops
 
 ```yaml
 fs-shops: false
 ```
 
-Existing shops remain saved. Purchases and new shop creation stop, while owners and administrators can still manage, collect, and dismantle them.
+Disabling shops prevents new shop creation and customer purchases. Existing shop records remain saved, and owners or administrators can still manage, collect, or dismantle them.
 
-## Mailboxes
+## Virtual mailboxes
 
-To create your own mailbox:
+### Creating your own mailbox
 
 1. Attach a sign to an empty supported container.
 2. Enter `[fs mail]` on the first line.
 3. Leave the second line blank.
-4. The sign becomes `[mail]` with your name.
+4. Finish editing the sign.
 
-An authorized administrator can create a mailbox for another player while holding a Master Key in either hand:
+The sign changes to:
+
+```text
+[mail]
+PlayerName
+```
+
+### Creating a mailbox for another player
+
+An administrator with `fragstealers.masterkey.use` can hold a genuine Master Key in either hand and create a mailbox for a known player:
 
 ```text
 Line 1: [fs mail]
 Line 2: PlayerName
 ```
 
-The target must already be known to the server. The mailbox is stored under the target player's UUID exactly as though that player had created it, and delegated creation is recorded in `audit-log.yml`.
+The mailbox is stored under the target player's UUID as though that player created it. Delegated creation is recorded in `audit-log.yml`.
 
-Clicking another player's mailbox offers deposit access only. Occupied mailbox slots appear as locked red panes, while empty slots accept items. Owners and authorized Master Key holders can deposit or open pickup mode to view the real virtual inventory.
+### Depositing and collecting mail
 
-Mailbox contents are stored in `mailboxes.yml`, not in the physical container. A barrel or single chest has 27 slots; a double chest has 54. Owners receive **You've Got Mail!** when an online deposit completes and once when joining while mail remains waiting.
+- Other players can deposit items without seeing existing mailbox contents.
+- Occupied slots appear as locked red panes during deposit mode.
+- A single chest or barrel mailbox has 27 virtual slots.
+- A double chest mailbox has 54 virtual slots.
+- Master Keys and internal menu items cannot be mailed.
+- The owner receives **You've Got Mail!** after a successful online deposit and once after joining while mail remains waiting.
 
-Mailboxes can be disabled with:
+Access-level trusted players can collect mail but cannot insert or rearrange items through pickup mode. Manage-level trusted players receive full mailbox-content controls.
+
+### Disabling mailboxes
 
 ```yaml
 fs-mail: false
 ```
 
-Existing mail remains saved and can still be collected or recovered.
+Disabling mailboxes prevents new mailbox creation and new deposits. Existing mailbox data remains saved and can still be collected or recovered.
 
 ## Master Key
+
+The Master Key is an unbreakable custom wooden axe identified through persistent item data. A renamed ordinary wooden axe does not work as a Master Key.
 
 ```text
 /fs give masterkey
 /fs give masterkey <player>
 ```
 
-The Master Key is an unbreakable custom wooden axe. It works only for players with `fragstealers.masterkey.use`. It must be in the main hand when opening or managing protected storage and removing signs; delegated mailbox creation accepts it in either hand so the sign can be placed normally. It cannot directly break a still-protected container.
+Requirements:
 
-## Other commands
+- Giving keys requires `fragstealers.masterkey.give`.
+- Using keys requires `fragstealers.masterkey.use`.
+- The key normally must remain in the main hand while accessing or managing another player's protection.
+- Delegated mailbox creation accepts the key in either hand so the sign can be placed normally.
 
-```text
-/fs reload
-```
+A Master Key cannot directly break a protected container. The administrator must remove the protection sign first.
 
-Reloads `config.yml` without deleting or recreating saved protections. Missing settings from newer versions are merged into existing configurations without replacing values you already changed.
+## Commands
+
+| Command | Description |
+|---|---|
+| `/fs trust <player> [access\|manage]` | Adds or updates a trusted player on the protection being targeted |
+| `/fs untrust <player>` | Removes a trusted player from the targeted protection |
+| `/fs trusted` | Lists trusted players and access levels for the targeted protection |
+| `/fs give masterkey` | Gives the sender a Master Key |
+| `/fs give masterkey <player>` | Gives an online player a Master Key |
+| `/fs reload` | Reloads `config.yml` and merges missing defaults |
 
 ## Permissions
 
-```text
-fragstealers.lock.create       default: true
-fragstealers.shop.create       default: true
-fragstealers.mail.create       default: true
-fragstealers.masterkey.give    default: op
-fragstealers.masterkey.use     default: op
-fragstealers.admin.reload      default: op
-```
+| Permission | Default | Purpose |
+|---|---:|---|
+| `fragstealers.lock.create` | `true` | Create ordinary storage locks |
+| `fragstealers.shop.create` | `true` | Create player shops |
+| `fragstealers.mail.create` | `true` | Create mailboxes |
+| `fragstealers.trust.manage` | `true` | Manage trusted players on protections the player owns |
+| `fragstealers.masterkey.give` | `op` | Give Master Keys |
+| `fragstealers.masterkey.use` | `op` | Use Master Key administrative access |
+| `fragstealers.admin.reload` | `op` | Reload the plugin configuration |
 
 ## Data files
+
+FragStealers stores its data in:
 
 ```text
 plugins/FragStealers/
@@ -117,7 +227,20 @@ plugins/FragStealers/
 ├── locks.yml
 ├── shops.yml
 ├── mailboxes.yml
+├── trusted-players.yml
 └── audit-log.yml
 ```
 
-Master Key administrative mailbox creation, removals, and item withdrawals are recorded in `audit-log.yml`. Entries older than 30 days are purged automatically.
+Do not edit data files while the server is running. FragStealers uses atomic YAML writes to reduce the risk of partial or corrupted saves.
+
+## Administrative audit log
+
+`audit-log.yml` records administrative actions performed through Master Key access, including:
+
+- Creating a mailbox for another player
+- Removing another player's protection sign
+- Withdrawing items from another player's protected lock
+- Withdrawing stock from another player's shop
+- Withdrawing items from another player's mailbox
+
+Audit entries older than 30 days are purged automatically.

@@ -11,14 +11,22 @@ public final class MailboxMenuHolder implements InventoryHolder {
     private final boolean[] blockedSlots;
     private final ItemStack[] before;
     private final boolean adminOverride;
+    private final boolean pickupReadOnly;
     private Inventory inventory;
 
-    public MailboxMenuHolder(BlockKey signKey, MailboxMenuType type, boolean[] blockedSlots, ItemStack[] before, boolean adminOverride) {
+    public MailboxMenuHolder(BlockKey signKey, MailboxMenuType type, boolean[] blockedSlots, ItemStack[] before,
+                             boolean adminOverride) {
+        this(signKey, type, blockedSlots, before, adminOverride, false);
+    }
+
+    public MailboxMenuHolder(BlockKey signKey, MailboxMenuType type, boolean[] blockedSlots, ItemStack[] before,
+                             boolean adminOverride, boolean pickupReadOnly) {
         this.signKey = signKey;
         this.type = type;
         this.blockedSlots = blockedSlots == null ? new boolean[0] : blockedSlots.clone();
         this.before = cloneItems(before);
         this.adminOverride = adminOverride;
+        this.pickupReadOnly = pickupReadOnly;
     }
 
     public BlockKey signKey() { return signKey; }
@@ -26,6 +34,7 @@ public final class MailboxMenuHolder implements InventoryHolder {
     public boolean blocked(int slot) { return slot >= 0 && slot < blockedSlots.length && blockedSlots[slot]; }
     public ItemStack[] before() { return cloneItems(before); }
     public boolean adminOverride() { return adminOverride; }
+    public boolean pickupReadOnly() { return pickupReadOnly; }
     public void inventory(Inventory inventory) { this.inventory = inventory; }
     @Override public Inventory getInventory() { return inventory; }
 

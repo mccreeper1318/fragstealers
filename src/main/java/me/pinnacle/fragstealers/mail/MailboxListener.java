@@ -56,7 +56,8 @@ public final class MailboxListener implements Listener {
 
         if (holder.type() == MailboxMenuType.MAIN) {
             event.setCancelled(true);
-            if (holder.adminOverride() && !plugin.masterKeys().canUse(player)) {
+            if (holder.adminOverride() && !plugin.masterKeys().canUse(player)
+                && !plugin.canCollectMailbox(player, holder.signKey())) {
                 plugin.getServer().getScheduler().runTask(plugin, () -> player.closeInventory());
                 player.sendMessage(plugin.error("Keep the Master Key in your main hand while managing this mailbox."));
                 return;
@@ -67,16 +68,19 @@ public final class MailboxListener implements Listener {
         if (holder.type() == MailboxMenuType.DEPOSIT) {
             enforceDeposit(event, player, holder, top);
         } else if (holder.type() == MailboxMenuType.PICKUP) {
-            if (holder.adminOverride() && !plugin.masterKeys().canUse(player)) {
+            MailboxData mailbox = manager.bySign(holder.signKey());
+            if (mailbox == null || !plugin.canCollectMailbox(player, mailbox)) {
                 event.setCancelled(true);
                 plugin.getServer().getScheduler().runTask(plugin, () -> player.closeInventory());
-                player.sendMessage(plugin.error("Keep the Master Key in your main hand while managing this mailbox."));
+                player.sendMessage(plugin.error("You no longer have permission to collect from this mailbox."));
                 return;
             }
-            enforcePickup(event, player, top);
+            boolean readOnly = holder.pickupReadOnly() || !plugin.canManageMailbox(player, mailbox);
+            enforcePickup(event, player, top, readOnly);
             if (holder.adminOverride()) {
                 plugin.getServer().getScheduler().runTask(plugin, () -> {
-                    if (!plugin.masterKeys().canUse(player)) player.closeInventory();
+                    if (!plugin.masterKeys().canUse(player)
+                        && !plugin.canCollectMailbox(player, holder.signKey())) player.closeInventory();
                 });
             }
         }
@@ -91,11 +95,20 @@ public final class MailboxListener implements Listener {
             event.setCancelled(true);
             return;
         }
-        if (holder.type() == MailboxMenuType.PICKUP && holder.adminOverride() && !plugin.masterKeys().canUse(player)) {
-            event.setCancelled(true);
-            plugin.getServer().getScheduler().runTask(plugin, () -> player.closeInventory());
-            player.sendMessage(plugin.error("Keep the Master Key in your main hand while managing this mailbox."));
-            return;
+        if (holder.type() == MailboxMenuType.PICKUP) {
+            MailboxData mailbox = manager.bySign(holder.signKey());
+            if (mailbox == null || !plugin.canCollectMailbox(player, mailbox)) {
+                event.setCancelled(true);
+                plugin.getServer().getScheduler().runTask(plugin, () -> player.closeInventory());
+                player.sendMessage(plugin.error("You no longer have permission to collect from this mailbox."));
+                return;
+            }
+            if ((holder.pickupReadOnly() || !plugin.canManageMailbox(player, mailbox))
+                && event.getRawSlots().stream().anyMatch(slot -> slot < top.getSize())) {
+                event.setCancelled(true);
+                player.sendMessage(plugin.error("Access-level trust allows collecting mail but not adding or rearranging it."));
+                return;
+            }
         }
         if (plugin.masterKeys().isMasterKey(event.getOldCursor())) {
             event.setCancelled(true);
@@ -146,12 +159,13 @@ public final class MailboxListener implements Listener {
             plugin.getServer().getScheduler().runTask(plugin, () -> player.closeInventory());
             return;
         }
-        boolean manage = plugin.canManage(player, mailbox.ownerUuid());
+        boolean manage = plugin.canManageMailbox(player, mailbox);
+        boolean collect = plugin.canCollectMailbox(player, mailbox);
         int slot = event.getSlot();
-        if ((manage && slot == MailboxMenuService.OWNER_DEPOSIT_SLOT)
-            || (!manage && slot == MailboxMenuService.PUBLIC_DEPOSIT_SLOT)) {
+        if (((manage || collect) && slot == MailboxMenuService.OWNER_DEPOSIT_SLOT)
+            || (!collect && slot == MailboxMenuService.PUBLIC_DEPOSIT_SLOT)) {
             plugin.getServer().getScheduler().runTask(plugin, () -> menus.openDeposit(player, mailbox));
-        } else if (manage && slot == MailboxMenuService.OWNER_PICKUP_SLOT) {
+        } else if (collect && slot == MailboxMenuService.OWNER_PICKUP_SLOT) {
             plugin.getServer().getScheduler().runTask(plugin, () -> menus.openPickup(player, mailbox));
         }
     }
@@ -186,10 +200,25 @@ public final class MailboxListener implements Listener {
         }
     }
 
-
-    private void enforcePickup(InventoryClickEvent event, Player player, Inventory top) {
+    private void enforcePickup(InventoryClickEvent event, Player player, Inventory top, boolean readOnly) {
         int raw = event.getRawSlot();
         boolean topSlot = raw >= 0 && raw < top.getSize();
+
+        if (readOnly) {
+            boolean movingIntoTop = (!topSlot && event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY)
+                || (topSlot && (event.getAction() == InventoryAction.PLACE_ALL
+                    || event.getAction() == InventoryAction.PLACE_ONE
+                    || event.getAction() == InventoryAction.PLACE_SOME
+                    || event.getAction() == InventoryAction.SWAP_WITH_CURSOR
+                    || event.getAction() == InventoryAction.CLONE_STACK
+                    || isHotbarAction(event.getAction())));
+            if (movingIntoTop) {
+                event.setCancelled(true);
+                player.sendMessage(plugin.error("Access-level trust allows collecting mail but not adding or rearranging it."));
+                return;
+            }
+        }
+
         ItemStack moving = null;
         if (!topSlot && event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY) {
             moving = event.getCurrentItem();
@@ -210,7 +239,7 @@ public final class MailboxListener implements Listener {
     }
 
     private boolean isHotbarAction(InventoryAction action) {
-        return action == InventoryAction.HOTBAR_SWAP;
+        return action == InventoryAction.HOTBAR_SWAP || action == InventoryAction.HOTBAR_MOVE_AND_READD;
     }
 
     private void finishDeposit(Player player, Inventory inventory, MailboxMenuHolder holder) {

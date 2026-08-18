@@ -8,7 +8,7 @@ description: Unified storage locks, player shops, mailboxes, and administrative 
 commands:
   fragstealers:
     description: FragStealers administration and utility commands.
-    usage: /fs [give masterkey [player]|reload]
+    usage: /fs [trust <player> [access|manage]|untrust <player>|trusted|give masterkey [player]|reload]
     aliases: [fs]
 
 permissions:
@@ -20,6 +20,9 @@ permissions:
     default: true
   fragstealers.mail.create:
     description: Allows creation of FragStealers mailboxes.
+    default: true
+  fragstealers.trust.manage:
+    description: Allows owners to manage trusted players on their FragStealers protections.
     default: true
   fragstealers.masterkey.give:
     description: Allows issuing FragStealers Master Keys.
