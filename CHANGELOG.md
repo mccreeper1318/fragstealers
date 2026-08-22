@@ -14,9 +14,14 @@
 - Kept the empty-container requirement for `[fs shop]` and `[fs mail]` creation.
 - Updated the stable Gradle project version to `26.2-7` so `26.2-7-beta.1` prerelease builds pass release-version validation.
 
+### Fixed
+
+- Fixed a P1 protection bypass where players who already had a nonempty container open could keep withdrawing items after an `[fs]` lock was created.
+
 ### Security
 
 - Restricted delegated lock ownership to known server players and administrators with `fragstealers.masterkey.use` who are actively holding a genuine Master Key.
+- Closed all existing container viewers immediately after lock creation so renewed access must pass the normal owner, trusted-player, or Master Key authorization checks.
 
 ### Documentation
 

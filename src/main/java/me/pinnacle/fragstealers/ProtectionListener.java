@@ -105,7 +105,7 @@ public final class ProtectionListener implements Listener {
         }
 
         switch (tag) {
-            case "fs" -> createLock(event, player, signBlock, containers);
+            case "fs" -> createLock(event, player, signBlock, containers, inventory);
             case "fs shop" -> createShop(event, player, signBlock, containers);
             case "fs mail" -> createMailbox(event, player, signBlock, containers);
             default -> {
@@ -365,7 +365,7 @@ public final class ProtectionListener implements Listener {
         if (event.getBlocks().stream().anyMatch(plugin::anyProtectedBlock)) event.setCancelled(true);
     }
 
-    private void createLock(SignChangeEvent event, Player player, Block sign, Set<Block> containers) {
+    private void createLock(SignChangeEvent event, Player player, Block sign, Set<Block> containers, Inventory inventory) {
         if (!player.hasPermission("fragstealers.lock.create")) {
             event.setCancelled(true);
             player.sendMessage(plugin.error("You do not have permission to create locks."));
@@ -404,6 +404,10 @@ public final class ProtectionListener implements Listener {
             player.sendMessage(plugin.error("Could not create this protection."));
             return;
         }
+        for (var viewer : new ArrayList<>(inventory.getViewers())) {
+            viewer.closeInventory();
+        }
+
         event.line(0, Component.text("[protected]"));
         event.line(1, Component.text(ownerName));
         event.line(2, Component.empty());
