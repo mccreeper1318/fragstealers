@@ -1,4 +1,4 @@
-# FragStealers 26.2-6
+# FragStealers 26.2-7
 
 FragStealers is a Paper plugin for protecting player storage, operating secure container shops, sending items through virtual mailboxes, sharing controlled access with trusted players, and giving administrators a logged recovery tool.
 
@@ -10,7 +10,7 @@ FragStealers is a Paper plugin for protecting player storage, operating secure c
 ## Installation
 
 1. Stop the server.
-2. Place `FragStealers-26.2-6.jar` in the server's `plugins` folder.
+2. Place `FragStealers-26.2-7.jar` in the server's `plugins` folder.
 3. Start the server.
 4. Review `plugins/FragStealers/config.yml`.
 
@@ -25,7 +25,7 @@ FragStealers supports:
 - Double chests
 - Barrels
 
-A container must be empty before it can become a lock, shop, or mailbox. A container cannot be registered as more than one FragStealers type.
+Ordinary `[fs]` locks can protect containers that already hold items. Shops and mailboxes must still be empty when they are created. A container cannot be registered as more than one FragStealers type.
 
 ## Ordinary storage locks
 
@@ -45,6 +45,17 @@ PlayerName
 The owner can open the container and remove the protection sign. Trusted players can open the container according to the trust system. Authorized Master Key holders can open the container and remove its sign for administrative recovery.
 
 The protected container cannot be broken until its protection sign is removed.
+
+### Creating a lock for another player
+
+An administrator with `fragstealers.masterkey.use` can hold a genuine Master Key in either hand and create a storage lock for a known player:
+
+```text
+Line 1: [fs]
+Line 2: PlayerName
+```
+
+The container can already contain items. Ownership is stored under the target player's UUID as though that player created the lock, and the delegated action is recorded in `audit-log.yml`.
 
 ### Hopper settings
 
@@ -190,7 +201,7 @@ Requirements:
 - Giving keys requires `fragstealers.masterkey.give`.
 - Using keys requires `fragstealers.masterkey.use`.
 - The key normally must remain in the main hand while accessing or managing another player's protection.
-- Delegated mailbox creation accepts the key in either hand so the sign can be placed normally.
+- Delegated lock and mailbox creation accept the key in either hand so the sign can be placed normally.
 
 A Master Key cannot directly break a protected container. The administrator must remove the protection sign first.
 
@@ -237,6 +248,7 @@ Do not edit data files while the server is running. FragStealers uses atomic YAM
 
 `audit-log.yml` records administrative actions performed through Master Key access, including:
 
+- Creating a storage lock for another player
 - Creating a mailbox for another player
 - Removing another player's protection sign
 - Withdrawing items from another player's protected lock

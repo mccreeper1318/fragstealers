@@ -83,6 +83,10 @@ public final class LockManager {
     }
 
     public boolean create(Collection<Block> blocks, Block sign, Player owner) {
+        return create(blocks, sign, owner.getUniqueId(), owner.getName());
+    }
+
+    public boolean create(Collection<Block> blocks, Block sign, UUID ownerUuid, String ownerName) {
         Set<BlockKey> keys = new LinkedHashSet<>();
         for (Block block : blocks) {
             BlockKey key = BlockKey.from(block);
@@ -95,7 +99,7 @@ public final class LockManager {
         if (keys.isEmpty() || bySign.containsKey(signKey)) {
             return false;
         }
-        register(new ChestLock(keys, signKey, owner.getUniqueId(), owner.getName()));
+        register(new ChestLock(keys, signKey, ownerUuid, ownerName));
         save();
         return true;
     }

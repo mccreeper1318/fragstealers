@@ -138,7 +138,7 @@
              if (!mailboxSign.isOwner(player.getUniqueId())) {
                  plugin.audit().log(player, "REMOVED_MAILBOX", ProtectionType.MAILBOX, mailboxSign.ownerUuid(), mailboxSign.ownerName(), mailboxSign.signKey(),
                      "Returned " + mail.size() + " mail stack(s) to administrator");
-@@ -476,6 +489,10 @@
+@@ -515,6 +528,10 @@
          sign.update(true, false);
      }
  
@@ -149,7 +149,7 @@
      private ItemStack[] cloneContents(ItemStack[] contents) {
          ItemStack[] copy = new ItemStack[contents.length];
          for (int i = 0; i < contents.length; i++) {
-@@ -528,7 +545,7 @@
+@@ -567,7 +584,7 @@
          return text.replaceAll("\\s+", " ");
      }
  

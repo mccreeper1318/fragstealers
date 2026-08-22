@@ -1,5 +1,32 @@
 # FragStealers Changelog
 
+## 26.2-7-beta.1
+
+### Added
+
+- Added delegated `[fs]` lock creation for authorized administrators holding a genuine Master Key in either hand.
+- Added support for entering a known player's name on the second line of an `[fs]` sign to register the lock under that player's UUID.
+- Added audit-log entries whenever an administrator creates a storage lock on behalf of another player.
+
+### Changed
+
+- Changed ordinary `[fs]` locks to allow protecting chests, double chests, trapped chests, and barrels that already contain items.
+- Kept the empty-container requirement for `[fs shop]` and `[fs mail]` creation.
+- Updated the stable Gradle project version to `26.2-7` so `26.2-7-beta.1` prerelease builds pass release-version validation.
+
+### Fixed
+
+- Fixed a P1 protection bypass where players who already had a nonempty container open could keep withdrawing items after an `[fs]` lock was created.
+
+### Security
+
+- Restricted delegated lock ownership to known server players and administrators with `fragstealers.masterkey.use` who are actively holding a genuine Master Key.
+- Closed all existing container viewers immediately after lock creation so renewed access must pass the normal owner, trusted-player, or Master Key authorization checks.
+
+### Documentation
+
+- Documented delegated lock creation, existing-item lock support, Master Key requirements, and delegated-lock audit logging.
+
 ## 26.2-6-rc.2
 
 ### Changed
