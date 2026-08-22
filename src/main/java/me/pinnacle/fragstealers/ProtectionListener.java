@@ -98,9 +98,9 @@ public final class ProtectionListener implements Listener {
             return;
         }
         Inventory inventory = plugin.resolver().inventory(container);
-        if (!plugin.resolver().isEmpty(inventory)) {
+        if (!tag.equals("fs") && !plugin.resolver().isEmpty(inventory)) {
             event.setCancelled(true);
-            player.sendMessage(plugin.error("The container must be completely empty before creating an FS container."));
+            player.sendMessage(plugin.error("The container must be completely empty before creating an FS shop or mailbox."));
             return;
         }
 
@@ -371,16 +371,51 @@ public final class ProtectionListener implements Listener {
             player.sendMessage(plugin.error("You do not have permission to create locks."));
             return;
         }
-        if (!plugin.locks().create(containers, sign, player)) {
+
+        UUID ownerUuid = player.getUniqueId();
+        String ownerName = player.getName();
+        boolean delegated = false;
+        String requestedOwner = plain(event.line(1)).trim();
+
+        if (!requestedOwner.isEmpty() && !requestedOwner.equalsIgnoreCase(player.getName())) {
+            if (!plugin.masterKeys().canUseInEitherHand(player)) {
+                event.setCancelled(true);
+                player.sendMessage(plugin.error("Only an authorized administrator holding a Master Key in either hand can create a lock for another player."));
+                return;
+            }
+
+            OfflinePlayer target = plugin.getServer().getPlayerExact(requestedOwner);
+            if (target == null) {
+                target = plugin.getServer().getOfflinePlayerIfCached(requestedOwner);
+            }
+            if (target == null || target.getName() == null) {
+                event.setCancelled(true);
+                player.sendMessage(plugin.error("Player '" + requestedOwner + "' is not known to this server. Check the spelling and make sure they have joined before."));
+                return;
+            }
+
+            ownerUuid = target.getUniqueId();
+            ownerName = target.getName();
+            delegated = true;
+        }
+
+        if (!plugin.locks().create(containers, sign, ownerUuid, ownerName)) {
             event.setCancelled(true);
             player.sendMessage(plugin.error("Could not create this protection."));
             return;
         }
         event.line(0, Component.text("[protected]"));
-        event.line(1, Component.text(player.getName()));
+        event.line(1, Component.text(ownerName));
         event.line(2, Component.empty());
         event.line(3, Component.empty());
-        player.sendMessage(plugin.success("Container protected."));
+
+        if (delegated) {
+            plugin.audit().log(player, "CREATED_LOCK_FOR_PLAYER", ProtectionType.LOCK,
+                ownerUuid, ownerName, BlockKey.from(sign), "Created a lock on behalf of " + ownerName + ".");
+            player.sendMessage(plugin.success("Container protected for " + ownerName + "."));
+        } else {
+            player.sendMessage(plugin.success("Container protected."));
+        }
     }
 
     private void createShop(SignChangeEvent event, Player player, Block sign, Set<Block> containers) {
