@@ -1,5 +1,24 @@
 # FragStealers Changelog
 
+## 26.2-7-rc.1
+
+### Changed
+
+- Replaced the shop anvil search with a categorized item picker that organizes sale and payment materials into main categories and subcategories.
+- Limited shop item pagination to individual subcategories and added consistent Back, Previous Page, Next Page, and Cancel Setup navigation.
+- Changed known-player resolution for delegated lock and mailbox creation and `/fs trust` to use actual server play history instead of the profile cache.
+- Folded the existing trusted-shop menu and stock safeguards directly into the shop source so the categorized picker preserves access-level restocking, manage-level controls, and Master Key fallback behavior.
+
+### Fixed
+
+- Fixed issue #11 where valid offline players could be rejected for delegated ownership or trust when their profile was not currently cached.
+- Fixed issue #12 where a newly created lock could appear successful in memory even when `locks.yml` failed to persist; failed lock creates now roll back their in-memory registration.
+- Fixed issue #13 by removing the unreliable anvil search holder and refresh listener and replacing them with organized category, subcategory, and item menus.
+
+### Documentation
+
+- Updated shop setup documentation for the categorized item picker and documented server-history-based known-player resolution.
+
 ## 26.2-7-beta.1
 
 ### Added
