@@ -33,6 +33,7 @@ public final class ShopMenuService {
     public static final int CANCEL_SETUP_SLOT = 49;
     public static final int NEXT_PAGE_SLOT = 51;
     public static final int CONFIRM_DONE_SLOT = 11;
+    public static final int CONFIRM_BACK_SLOT = 13;
     public static final int CONFIRM_CANCEL_SLOT = 15;
     public static final int PAGE_SIZE = 45;
 
@@ -109,6 +110,10 @@ public final class ShopMenuService {
                 List.of(Component.text(ItemCatalog.itemCount(category) + " items", NamedTextColor.GRAY),
                     Component.text("Click to browse subcategories.", NamedTextColor.DARK_GRAY))));
         }
+        if (type == ShopMenuType.SELECT_PRICE_CATEGORY) {
+            inventory.setItem(BACK_SLOT, namedItem(Material.ARROW, "Back to Sell Quantity", NamedTextColor.YELLOW,
+                List.of(Component.text("Return without restarting setup.", NamedTextColor.GRAY))));
+        }
         inventory.setItem(CANCEL_SETUP_SLOT, namedItem(Material.RED_STAINED_GLASS_PANE, "Cancel Setup", NamedTextColor.RED, List.of()));
         player.openInventory(inventory);
     }
@@ -180,6 +185,8 @@ public final class ShopMenuService {
             button.setAmount(amount);
             inventory.setItem(i - start, button);
         }
+        inventory.setItem(BACK_SLOT, namedItem(Material.ARROW, "Back to Item Selection", NamedTextColor.YELLOW,
+            List.of(Component.text("Change the selected material without restarting setup.", NamedTextColor.GRAY))));
         if (safePage > 0) inventory.setItem(PREVIOUS_PAGE_SLOT, namedItem(Material.ARROW, "Previous Page", NamedTextColor.YELLOW, List.of()));
         inventory.setItem(CANCEL_SETUP_SLOT, namedItem(Material.RED_STAINED_GLASS_PANE, "Cancel Setup", NamedTextColor.RED, List.of()));
         if (safePage < maxPage) inventory.setItem(NEXT_PAGE_SLOT, namedItem(Material.ARROW, "Next Page", NamedTextColor.YELLOW, List.of()));
@@ -195,6 +202,8 @@ public final class ShopMenuService {
         inventory.setItem(4, namedItem(sell, "Sell: " + ItemCatalog.display(sell) + " x" + sellAmount, NamedTextColor.GREEN, List.of()));
         inventory.setItem(22, namedItem(price, "Price: " + ItemCatalog.display(price) + " x" + priceAmount, NamedTextColor.RED, List.of()));
         inventory.setItem(CONFIRM_DONE_SLOT, namedItem(Material.LIME_STAINED_GLASS_PANE, "Done", NamedTextColor.GREEN, List.of()));
+        inventory.setItem(CONFIRM_BACK_SLOT, namedItem(Material.ARROW, "Back to Price Quantity", NamedTextColor.YELLOW,
+            List.of(Component.text("Review or change earlier selections without cancelling.", NamedTextColor.GRAY))));
         inventory.setItem(CONFIRM_CANCEL_SLOT, namedItem(Material.RED_STAINED_GLASS_PANE, "Cancel", NamedTextColor.RED, List.of()));
         player.openInventory(inventory);
     }
