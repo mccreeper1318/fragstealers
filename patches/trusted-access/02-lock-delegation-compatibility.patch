@@ -1,0 +1,14 @@
+--- fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/ProtectionListener.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/ProtectionListener.java
+@@ -393,8 +393,4 @@
+-        if (!requestedOwner.isEmpty() && !requestedOwner.equalsIgnoreCase(player.getName())) {
+-            if (!plugin.masterKeys().canUseInEitherHand(player)) {
+-                event.setCancelled(true);
+-                player.sendMessage(plugin.error("Only an authorized administrator holding a Master Key in either hand can create a lock for another player."));
+-                return;
+-            }
+-
++        if (plugin.masterKeys().canUseInEitherHand(player)
++            && !requestedOwner.isEmpty()
++            && !requestedOwner.equalsIgnoreCase(player.getName())) {
+             OfflinePlayer target = KnownPlayerResolver.find(plugin.getServer(), requestedOwner);
