@@ -2,8 +2,12 @@ package me.pinnacle.fragstealers.shop;
 
 public enum ShopMenuType {
     MAIN,
+    SELECT_SELL_CATEGORY,
+    SELECT_SELL_GROUP,
     SELECT_SELL_ITEM,
     SELECT_SELL_AMOUNT,
+    SELECT_PRICE_CATEGORY,
+    SELECT_PRICE_GROUP,
     SELECT_PRICE_ITEM,
     SELECT_PRICE_AMOUNT,
     CONFIRM_SETUP

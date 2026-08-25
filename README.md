@@ -80,7 +80,7 @@ Protection owners can grant access to individual players while looking directly 
 /fs trusted
 ```
 
-The target player must already be known to the server. Trust is stored by UUID in `trusted-players.yml`, so name changes do not transfer access to another account.
+The target player must already be known to the server. FragStealers checks the server's player history rather than requiring the player to be currently cached or online. Trust is stored by UUID in `trusted-players.yml`, so name changes do not transfer access to another account.
 
 ### Access levels
 
@@ -112,18 +112,28 @@ To create a shop:
 
 Shop stock remains in the physical container. Collected payments are stored in `shops.yml` until the owner, a manage-level trusted player, or an authorized Master Key holder collects them.
 
-### Item selection and search
+### Item selection
 
-The item selector includes an anvil search field. It supports partial friendly names and Minecraft-style names, including:
+Shop setup uses organized inventory menus instead of text or anvil search. Choose a main category, then a subcategory, then the exact item. Large subcategories use Previous and Next page controls, and Back buttons return to the previous level without cancelling setup.
 
-```text
-diamond
-oak log
-oak_log
-ingot
-```
+Main categories are:
 
-Leaving the search blank shows the full item catalog.
+- Building Blocks
+- Wood & Natural
+- Ores & Minerals
+- Redstone
+- Farming & Food
+- Mob Drops
+- Tools & Equipment
+- Decoration
+- Brewing & Enchanting
+- Transportation
+- Nether
+- End
+- Storage & Utility
+- Miscellaneous
+
+All materials allowed by the shop catalog remain reachable through these categories and subcategories.
 
 ### Shop signs
 

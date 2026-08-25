@@ -75,10 +75,7 @@ public final class FragStealersCommand implements CommandExecutor, TabCompleter 
             return true;
         }
 
-        OfflinePlayer trusted = Bukkit.getPlayerExact(args[1]);
-        if (trusted == null) {
-            trusted = plugin.getServer().getOfflinePlayerIfCached(args[1]);
-        }
+        OfflinePlayer trusted = KnownPlayerResolver.find(plugin.getServer(), args[1]);
         if (trusted == null || trusted.getName() == null) {
             owner.sendMessage(plugin.error("Player '" + args[1] + "' is not known to this server."));
             return true;

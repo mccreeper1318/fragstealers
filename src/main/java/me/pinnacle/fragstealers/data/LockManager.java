@@ -69,7 +69,7 @@ public final class LockManager {
         }
     }
 
-    public void save() {
+    public boolean save() {
         YamlConfiguration data = new YamlConfiguration();
         int index = 0;
         for (ChestLock lock : uniqueLocks()) {
@@ -79,7 +79,7 @@ public final class LockManager {
             data.set(path + ".owner-name", lock.ownerName());
             data.set(path + ".containers", lock.containerKeys().stream().map(BlockKey::serialize).toList());
         }
-        AtomicYaml.save(plugin, data, dataFile);
+        return AtomicYaml.save(plugin, data, dataFile);
     }
 
     public boolean create(Collection<Block> blocks, Block sign, Player owner) {
@@ -99,8 +99,13 @@ public final class LockManager {
         if (keys.isEmpty() || bySign.containsKey(signKey)) {
             return false;
         }
-        register(new ChestLock(keys, signKey, ownerUuid, ownerName));
-        save();
+
+        ChestLock lock = new ChestLock(keys, signKey, ownerUuid, ownerName);
+        register(lock);
+        if (!save()) {
+            unregister(lock);
+            return false;
+        }
         return true;
     }
 
@@ -150,10 +155,7 @@ public final class LockManager {
     }
 
     public void remove(ChestLock lock) {
-        bySign.remove(lock.signKey());
-        for (BlockKey key : lock.containerKeys()) {
-            byContainer.remove(key, lock);
-        }
+        unregister(lock);
         save();
     }
 
@@ -171,6 +173,13 @@ public final class LockManager {
         bySign.put(lock.signKey(), lock);
         for (BlockKey key : lock.containerKeys()) {
             byContainer.put(key, lock);
+        }
+    }
+
+    private void unregister(ChestLock lock) {
+        bySign.remove(lock.signKey(), lock);
+        for (BlockKey key : lock.containerKeys()) {
+            byContainer.remove(key, lock);
         }
     }
 
