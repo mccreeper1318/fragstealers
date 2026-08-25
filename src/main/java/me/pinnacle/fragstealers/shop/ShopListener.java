@@ -16,14 +16,13 @@ import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
-import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.view.AnvilView;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -59,26 +58,12 @@ public final class ShopListener implements Listener {
             return;
         }
         Inventory top = event.getView().getTopInventory();
-        if (top.getHolder() instanceof ShopSearchHolder holder) {
-            event.setCancelled(true);
-            if (holder.adminOverride() && !plugin.masterKeys().canUse(player) && !plugin.canManageShop(player, holder.signKey())) {
-                later(player::closeInventory);
-                player.sendMessage(plugin.error("Keep the Master Key in your main hand while managing this shop."));
-                return;
-            }
-            if (event.getRawSlot() == 2) {
-                String query = menus.searchQuery(event.getCurrentItem());
-                if (query == null) {
-                    return;
-                }
-                plugin.getServer().getScheduler().runTask(plugin,
-                    () -> menus.openItemPicker(player, holder.signKey(), holder.returnType(), 0, query));
-            }
-            return;
-        }
         if (top.getHolder() instanceof ShopMenuHolder holder) {
             event.setCancelled(true);
-            if (holder.adminOverride() && !plugin.masterKeys().canUse(player) && !(holder.type() == ShopMenuType.MAIN ? plugin.canRestockShop(player, holder.signKey()) : plugin.canManageShop(player, holder.signKey()))) {
+            if (holder.adminOverride() && !plugin.masterKeys().canUse(player)
+                && !(holder.type() == ShopMenuType.MAIN
+                ? plugin.canRestockShop(player, holder.signKey())
+                : plugin.canManageShop(player, holder.signKey()))) {
                 later(player::closeInventory);
                 player.sendMessage(plugin.error("Keep the Master Key in your main hand while managing this shop."));
                 return;
@@ -95,7 +80,7 @@ public final class ShopListener implements Listener {
             return;
         }
         Inventory top = event.getView().getTopInventory();
-        if (top.getHolder() instanceof ShopMenuHolder || top.getHolder() instanceof ShopSearchHolder) {
+        if (top.getHolder() instanceof ShopMenuHolder) {
             event.setCancelled(true);
             return;
         }
@@ -122,24 +107,8 @@ public final class ShopListener implements Listener {
     }
 
     @EventHandler
-    public void onPrepareAnvil(PrepareAnvilEvent event) {
-        if (!(event.getView().getTopInventory().getHolder() instanceof ShopSearchHolder)) {
-            return;
-        }
-        AnvilView anvilView = event.getView();
-        String query = menus.cleanSearchQuery(anvilView.getRenameText());
-        anvilView.setRepairCost(0);
-        anvilView.setMaximumRepairCost(Integer.MAX_VALUE);
-        event.setResult(menus.searchResult(query));
-    }
-
-    @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
         if (!(event.getPlayer() instanceof Player player)) {
-            return;
-        }
-        if (event.getInventory().getHolder() instanceof ShopSearchHolder) {
-            event.getInventory().clear();
             return;
         }
         StockSession session = stockSessions.get(player.getUniqueId());
@@ -179,6 +148,8 @@ public final class ShopListener implements Listener {
         }
         switch (holder.type()) {
             case MAIN -> handleMain(event, player, shop);
+            case SELECT_SELL_CATEGORY, SELECT_PRICE_CATEGORY -> handleCategoryPicker(event, player, shop, holder);
+            case SELECT_SELL_GROUP, SELECT_PRICE_GROUP -> handleGroupPicker(event, player, shop, holder);
             case SELECT_SELL_ITEM, SELECT_PRICE_ITEM -> handleItemPicker(event, player, shop, holder);
             case SELECT_SELL_AMOUNT, SELECT_PRICE_AMOUNT -> handleAmountPicker(event, player, shop, holder);
             case CONFIRM_SETUP -> handleConfirm(event, player, shop);
@@ -191,14 +162,13 @@ public final class ShopListener implements Listener {
         if (!shop.isConfigured()) {
             if (manage && slot == ShopMenuService.SETUP_SLOT) {
                 setupSessions.put(player.getUniqueId(), new SetupSession(shop.signKey()));
-                plugin.getServer().getScheduler().runTask(plugin,
-                    () -> menus.openItemPicker(player, shop.signKey(), ShopMenuType.SELECT_SELL_ITEM, 0, ""));
+                later(() -> menus.openCategoryPicker(player, shop.signKey(), ShopMenuType.SELECT_SELL_CATEGORY));
             }
             return;
         }
         if (manage) {
             if (slot == ShopMenuService.OWNER_STOCK_SLOT) {
-                plugin.getServer().getScheduler().runTask(plugin, () -> {
+                later(() -> {
                     Inventory inventory = manager.inventory(shop);
                     if (inventory == null) {
                         player.sendMessage(plugin.error("The shop container could not be found."));
@@ -209,51 +179,94 @@ public final class ShopListener implements Listener {
                     menus.openStock(player, shop);
                 });
             } else if (slot == ShopMenuService.OWNER_COLLECT_SLOT) {
-                plugin.getServer().getScheduler().runTask(plugin, () -> menus.collectPayments(player, shop));
+                later(() -> menus.collectPayments(player, shop));
             }
         } else if (slot == ShopMenuService.BUY_SLOT) {
-            plugin.getServer().getScheduler().runTask(plugin, () -> menus.buy(player, shop));
+            later(() -> menus.buy(player, shop));
         } else if (slot == ShopMenuService.CLOSE_SLOT) {
             later(player::closeInventory);
         }
     }
 
-    private void handleItemPicker(InventoryClickEvent event, Player player, ShopData shop, ShopMenuHolder holder) {
-        if (!ensureCanSetup(player, shop)) {
-            return;
-        }
+    private void handleCategoryPicker(InventoryClickEvent event, Player player, ShopData shop, ShopMenuHolder holder) {
+        if (!ensureCanSetup(player, shop)) return;
         int slot = event.getSlot();
-        if (slot == ShopMenuService.PREVIOUS_PAGE_SLOT) {
-            later(() -> menus.openItemPicker(player, shop.signKey(), holder.type(), holder.page() - 1, holder.query()));
+        if (slot == ShopMenuService.CANCEL_SETUP_SLOT) {
+            cancelSetup(player, shop);
             return;
         }
-        if (slot == ShopMenuService.NEXT_PAGE_SLOT) {
-            later(() -> menus.openItemPicker(player, shop.signKey(), holder.type(), holder.page() + 1, holder.query()));
-            return;
-        }
-        if (slot == ShopMenuService.SEARCH_SLOT) {
-            later(() -> menus.openSearch(player, shop.signKey(), holder.type()));
+        if (slot < 0 || slot >= ShopMenuService.PAGE_SIZE) return;
+
+        List<ItemCatalog.Category> categories = ItemCatalog.categories();
+        if (slot >= categories.size()) return;
+        ItemCatalog.Category category = categories.get(slot);
+        ShopMenuType next = holder.type() == ShopMenuType.SELECT_SELL_CATEGORY
+            ? ShopMenuType.SELECT_SELL_GROUP : ShopMenuType.SELECT_PRICE_GROUP;
+        later(() -> menus.openGroupPicker(player, shop.signKey(), next, category));
+    }
+
+    private void handleGroupPicker(InventoryClickEvent event, Player player, ShopData shop, ShopMenuHolder holder) {
+        if (!ensureCanSetup(player, shop)) return;
+        int slot = event.getSlot();
+        if (slot == ShopMenuService.BACK_SLOT) {
+            ShopMenuType previous = holder.type() == ShopMenuType.SELECT_SELL_GROUP
+                ? ShopMenuType.SELECT_SELL_CATEGORY : ShopMenuType.SELECT_PRICE_CATEGORY;
+            later(() -> menus.openCategoryPicker(player, shop.signKey(), previous));
             return;
         }
         if (slot == ShopMenuService.CANCEL_SETUP_SLOT) {
-            setupSessions.remove(player.getUniqueId());
-            later(() -> menus.openMain(player, shop));
+            cancelSetup(player, shop);
             return;
         }
-        if (slot < 0 || slot >= ShopMenuService.PAGE_SIZE) {
+        if (slot < 0 || slot >= ShopMenuService.PAGE_SIZE || holder.category() == null) return;
+
+        List<ItemCatalog.Group> groups = ItemCatalog.groups(holder.category());
+        if (slot >= groups.size()) return;
+        ItemCatalog.Group group = groups.get(slot);
+        ShopMenuType next = holder.type() == ShopMenuType.SELECT_SELL_GROUP
+            ? ShopMenuType.SELECT_SELL_ITEM : ShopMenuType.SELECT_PRICE_ITEM;
+        later(() -> menus.openItemPicker(player, shop.signKey(), next, group, 0));
+    }
+
+    private void handleItemPicker(InventoryClickEvent event, Player player, ShopData shop, ShopMenuHolder holder) {
+        if (!ensureCanSetup(player, shop)) return;
+        ItemCatalog.Group group = holder.group();
+        if (group == null) return;
+        int slot = event.getSlot();
+
+        if (slot == ShopMenuService.BACK_SLOT) {
+            ShopMenuType previous = holder.type() == ShopMenuType.SELECT_SELL_ITEM
+                ? ShopMenuType.SELECT_SELL_GROUP : ShopMenuType.SELECT_PRICE_GROUP;
+            later(() -> menus.openGroupPicker(player, shop.signKey(), previous, group.category()));
             return;
         }
-        ItemStack clicked = event.getCurrentItem();
-        if (ItemUtil.isEmpty(clicked) || !ItemCatalog.isAllowed(clicked.getType())) {
+        if (slot == ShopMenuService.PREVIOUS_PAGE_SLOT) {
+            later(() -> menus.openItemPicker(player, shop.signKey(), holder.type(), group, holder.page() - 1));
             return;
         }
+        if (slot == ShopMenuService.NEXT_PAGE_SLOT) {
+            later(() -> menus.openItemPicker(player, shop.signKey(), holder.type(), group, holder.page() + 1));
+            return;
+        }
+        if (slot == ShopMenuService.CANCEL_SETUP_SLOT) {
+            cancelSetup(player, shop);
+            return;
+        }
+        if (slot < 0 || slot >= ShopMenuService.PAGE_SIZE) return;
+
+        List<Material> items = ItemCatalog.items(group);
+        int index = holder.page() * ShopMenuService.PAGE_SIZE + slot;
+        if (index < 0 || index >= items.size()) return;
+        Material selected = items.get(index);
+        if (!ItemCatalog.isAllowed(selected)) return;
+
         SetupSession session = session(player, shop.signKey());
         if (holder.type() == ShopMenuType.SELECT_SELL_ITEM) {
-            session.sellMaterial = clicked.getType();
-            later(() -> menus.openAmountPicker(player, shop, ShopMenuType.SELECT_SELL_AMOUNT, session.sellMaterial, 0));
+            session.sellMaterial = selected;
+            later(() -> menus.openAmountPicker(player, shop, ShopMenuType.SELECT_SELL_AMOUNT, selected, 0));
         } else {
-            session.priceMaterial = clicked.getType();
-            later(() -> menus.openAmountPicker(player, shop, ShopMenuType.SELECT_PRICE_AMOUNT, session.priceMaterial, 0));
+            session.priceMaterial = selected;
+            later(() -> menus.openAmountPicker(player, shop, ShopMenuType.SELECT_PRICE_AMOUNT, selected, 0));
         }
     }
 
@@ -273,8 +286,7 @@ public final class ShopListener implements Listener {
             return;
         }
         if (slot == ShopMenuService.CANCEL_SETUP_SLOT) {
-            setupSessions.remove(player.getUniqueId());
-            later(() -> menus.openMain(player, shop));
+            cancelSetup(player, shop);
             return;
         }
         if (slot < 0 || slot >= ShopMenuService.PAGE_SIZE) return;
@@ -283,18 +295,19 @@ public final class ShopListener implements Listener {
         int amount = clicked.getAmount();
         if (holder.type() == ShopMenuType.SELECT_SELL_AMOUNT) {
             session.sellAmount = amount;
-            later(() -> menus.openItemPicker(player, shop.signKey(), ShopMenuType.SELECT_PRICE_ITEM, 0, ""));
+            later(() -> menus.openCategoryPicker(player, shop.signKey(), ShopMenuType.SELECT_PRICE_CATEGORY));
         } else {
             session.priceAmount = amount;
-            if (session.complete()) later(() -> menus.openConfirm(player, shop, session.sellMaterial, session.sellAmount, session.priceMaterial, session.priceAmount));
+            if (session.complete()) {
+                later(() -> menus.openConfirm(player, shop, session.sellMaterial, session.sellAmount, session.priceMaterial, session.priceAmount));
+            }
         }
     }
 
     private void handleConfirm(InventoryClickEvent event, Player player, ShopData shop) {
         if (!ensureCanSetup(player, shop)) return;
         if (event.getSlot() == ShopMenuService.CONFIRM_CANCEL_SLOT) {
-            setupSessions.remove(player.getUniqueId());
-            later(() -> menus.openMain(player, shop));
+            cancelSetup(player, shop);
             return;
         }
         if (event.getSlot() != ShopMenuService.CONFIRM_DONE_SLOT) return;
@@ -317,6 +330,11 @@ public final class ShopListener implements Listener {
         manager.save();
         menus.updateSign(shop);
         player.sendMessage(plugin.success("Shop setup complete."));
+        later(() -> menus.openMain(player, shop));
+    }
+
+    private void cancelSetup(Player player, ShopData shop) {
+        setupSessions.remove(player.getUniqueId());
         later(() -> menus.openMain(player, shop));
     }
 
@@ -379,8 +397,15 @@ public final class ShopListener implements Listener {
     private void postCheckMasterKey(Player player, StockSession session) {
         if (!session.adminOverride()) return;
         plugin.getServer().getScheduler().runTask(plugin, () -> {
-            if (!plugin.masterKeys().canUse(player) && (manager.bySign(session.signKey()) == null || !stockAuthorized(player, manager.bySign(session.signKey()), session))) player.closeInventory();
+            ShopData active = manager.bySign(session.signKey());
+            if (!plugin.masterKeys().canUse(player) && (active == null || !stockAuthorized(player, active, session))) {
+                player.closeInventory();
+            }
         });
+    }
+
+    private boolean stockAuthorized(Player player, ShopData shop, StockSession session) {
+        return session.adminOverride() ? plugin.canManageShop(player, shop) : plugin.canRestockShop(player, shop);
     }
 
     private void cancelStock(InventoryClickEvent event, Player player, ShopData shop) {
