@@ -14,12 +14,20 @@
 - Fixed issue #11 where valid offline players could be rejected for delegated ownership or trust when their profile was not currently cached.
 - Fixed issue #12 where a newly created lock could appear successful in memory even when `locks.yml` failed to persist; failed lock creates now roll back their in-memory registration.
 - Fixed issue #13 by removing the unreliable anvil search holder and refresh listener and replacing them with organized category, subcategory, and item menus.
+- Fixed issue #14 so pushes to `dev/**` branches receive automatic validation builds before release work is promoted.
+- Fixed issue #15 so ordinary players can still put text on the second line of an `[fs]` sign without being rejected; delegated ownership is only interpreted when the creator is authorized and holding a genuine Master Key in either hand.
+- Fixed issue #16 by updating the compile dependency from the Paper 26.2 beta API to `paper-api:26.2.build.117-stable`.
 - Fixed shop setup navigation after item selection by adding Back controls to quantity and confirmation screens while preserving the active `SetupSession`, selected materials, quantities, subcategories, and item pages.
 - Added a Back path from price-category selection to the saved sell quantity so earlier sale-item mistakes can be corrected without cancelling and restarting shop setup.
 
 ### Documentation
 
 - Updated shop setup documentation for the categorized item picker and documented server-history-based known-player resolution.
+
+### Build and Release
+
+- Added `dev/**` to the automatic push-build branch filter while keeping prerelease publishing restricted to the existing authorized prerelease flow.
+- Updated the pinned Paper compile API to the stable `26.2.build.117-stable` release.
 
 ## 26.2-7-beta.1
 
