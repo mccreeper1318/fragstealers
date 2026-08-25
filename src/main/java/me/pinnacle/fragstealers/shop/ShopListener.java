@@ -177,6 +177,16 @@ public final class ShopListener implements Listener {
     private void handleCategoryPicker(InventoryClickEvent event, Player player, ShopData shop, ShopMenuHolder holder) {
         if (!ensureCanSetup(player, shop)) return;
         int slot = event.getSlot();
+        if (slot == ShopMenuService.BACK_SLOT && holder.type() == ShopMenuType.SELECT_PRICE_CATEGORY) {
+            SetupSession session = session(player, shop.signKey());
+            if (session.sellMaterial != null) {
+                later(() -> menus.openAmountPicker(player, shop, ShopMenuType.SELECT_SELL_AMOUNT,
+                    session.sellMaterial, amountPage(session.sellAmount)));
+            } else {
+                later(() -> menus.openCategoryPicker(player, shop.signKey(), ShopMenuType.SELECT_SELL_CATEGORY));
+            }
+            return;
+        }
         if (slot == ShopMenuService.CANCEL_SETUP_SLOT) {
             cancelSetup(player, shop);
             return;
@@ -243,10 +253,16 @@ public final class ShopListener implements Listener {
         if (!ItemCatalog.isAllowed(selected)) return;
         SetupSession session = session(player, shop.signKey());
         if (holder.type() == ShopMenuType.SELECT_SELL_ITEM) {
+            if (session.sellMaterial != selected) session.sellAmount = 0;
             session.sellMaterial = selected;
+            session.sellGroup = group;
+            session.sellItemPage = holder.page();
             later(() -> menus.openAmountPicker(player, shop, ShopMenuType.SELECT_SELL_AMOUNT, selected, 0));
         } else {
+            if (session.priceMaterial != selected) session.priceAmount = 0;
             session.priceMaterial = selected;
+            session.priceGroup = group;
+            session.priceItemPage = holder.page();
             later(() -> menus.openAmountPicker(player, shop, ShopMenuType.SELECT_PRICE_AMOUNT, selected, 0));
         }
     }
@@ -256,6 +272,22 @@ public final class ShopListener implements Listener {
         SetupSession session = session(player, shop.signKey());
         Material material = holder.type() == ShopMenuType.SELECT_SELL_AMOUNT ? session.sellMaterial : session.priceMaterial;
         int slot = event.getSlot();
+        if (slot == ShopMenuService.BACK_SLOT) {
+            if (holder.type() == ShopMenuType.SELECT_SELL_AMOUNT) {
+                if (session.sellGroup != null) {
+                    later(() -> menus.openItemPicker(player, shop.signKey(), ShopMenuType.SELECT_SELL_ITEM,
+                        session.sellGroup, session.sellItemPage));
+                } else {
+                    later(() -> menus.openCategoryPicker(player, shop.signKey(), ShopMenuType.SELECT_SELL_CATEGORY));
+                }
+            } else if (session.priceGroup != null) {
+                later(() -> menus.openItemPicker(player, shop.signKey(), ShopMenuType.SELECT_PRICE_ITEM,
+                    session.priceGroup, session.priceItemPage));
+            } else {
+                later(() -> menus.openCategoryPicker(player, shop.signKey(), ShopMenuType.SELECT_PRICE_CATEGORY));
+            }
+            return;
+        }
         if (slot == ShopMenuService.PREVIOUS_PAGE_SLOT) {
             if (material != null) later(() -> menus.openAmountPicker(player, shop, holder.type(), material, holder.page() - 1));
             return;
@@ -283,12 +315,21 @@ public final class ShopListener implements Listener {
 
     private void handleConfirm(InventoryClickEvent event, Player player, ShopData shop) {
         if (!ensureCanSetup(player, shop)) return;
+        SetupSession session = setupSessions.get(player.getUniqueId());
+        if (event.getSlot() == ShopMenuService.CONFIRM_BACK_SLOT) {
+            if (session == null || session.priceMaterial == null) {
+                player.sendMessage(plugin.error("Shop setup was incomplete."));
+                return;
+            }
+            later(() -> menus.openAmountPicker(player, shop, ShopMenuType.SELECT_PRICE_AMOUNT,
+                session.priceMaterial, amountPage(session.priceAmount)));
+            return;
+        }
         if (event.getSlot() == ShopMenuService.CONFIRM_CANCEL_SLOT) {
             cancelSetup(player, shop);
             return;
         }
         if (event.getSlot() != ShopMenuService.CONFIRM_DONE_SLOT) return;
-        SetupSession session = setupSessions.get(player.getUniqueId());
         if (session == null || !session.complete()) {
             player.sendMessage(plugin.error("Shop setup was incomplete."));
             return;
@@ -430,6 +471,10 @@ public final class ShopListener implements Listener {
         return created;
     }
 
+    private int amountPage(int amount) {
+        return Math.max(0, (Math.max(1, amount) - 1) / ShopMenuService.PAGE_SIZE);
+    }
+
     private boolean isHotbarAction(InventoryAction action) {
         return action == InventoryAction.HOTBAR_SWAP || action == InventoryAction.HOTBAR_MOVE_AND_READD;
     }
@@ -448,8 +493,12 @@ public final class ShopListener implements Listener {
         private final BlockKey signKey;
         private Material sellMaterial;
         private int sellAmount;
+        private ItemCatalog.Group sellGroup;
+        private int sellItemPage;
         private Material priceMaterial;
         private int priceAmount;
+        private ItemCatalog.Group priceGroup;
+        private int priceItemPage;
         private SetupSession(BlockKey signKey) { this.signKey = signKey; }
         private boolean complete() { return sellMaterial != null && priceMaterial != null && sellAmount > 0 && priceAmount > 0; }
     }
