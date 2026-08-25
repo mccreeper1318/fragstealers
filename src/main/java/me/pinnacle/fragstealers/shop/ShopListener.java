@@ -41,22 +41,16 @@ public final class ShopListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onInteract(PlayerInteractEvent event) {
-        if (event.getAction() != Action.RIGHT_CLICK_BLOCK || event.getClickedBlock() == null) {
-            return;
-        }
+        if (event.getAction() != Action.RIGHT_CLICK_BLOCK || event.getClickedBlock() == null) return;
         ShopData shop = manager.bySign(event.getClickedBlock());
-        if (shop == null) {
-            return;
-        }
+        if (shop == null) return;
         event.setCancelled(true);
         menus.openMain(event.getPlayer(), shop);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player)) {
-            return;
-        }
+        if (!(event.getWhoClicked() instanceof Player player)) return;
         Inventory top = event.getView().getTopInventory();
         if (top.getHolder() instanceof ShopMenuHolder holder) {
             event.setCancelled(true);
@@ -76,9 +70,7 @@ public final class ShopListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onInventoryDrag(InventoryDragEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player)) {
-            return;
-        }
+        if (!(event.getWhoClicked() instanceof Player player)) return;
         Inventory top = event.getView().getTopInventory();
         if (top.getHolder() instanceof ShopMenuHolder) {
             event.setCancelled(true);
@@ -88,11 +80,11 @@ public final class ShopListener implements Listener {
         if (session == null) return;
         ShopData shop = manager.bySign(session.signKey());
         if (shop == null || !manager.inventoryBelongs(top, shop)) return;
-        if (!plugin.canManage(player, shop.ownerUuid())) {
+        if (!stockAuthorized(player, shop, session)) {
             event.setCancelled(true);
             stockSessions.remove(player.getUniqueId());
-            plugin.getServer().getScheduler().runTask(plugin, () -> player.closeInventory());
-            player.sendMessage(plugin.error("Keep the Master Key in your main hand while managing this shop."));
+            later(player::closeInventory);
+            player.sendMessage(plugin.error("You no longer have access to this shop's stock."));
             return;
         }
         boolean intoTop = event.getRawSlots().stream().anyMatch(slot -> slot < top.getSize());
@@ -108,13 +100,9 @@ public final class ShopListener implements Listener {
 
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
-        if (!(event.getPlayer() instanceof Player player)) {
-            return;
-        }
+        if (!(event.getPlayer() instanceof Player player)) return;
         StockSession session = stockSessions.get(player.getUniqueId());
-        if (session == null) {
-            return;
-        }
+        if (session == null) return;
         ShopData shop = manager.bySign(session.signKey());
         if (shop == null || manager.inventoryBelongs(event.getInventory(), shop)) {
             stockSessions.remove(player.getUniqueId());
@@ -143,9 +131,7 @@ public final class ShopListener implements Listener {
             later(player::closeInventory);
             return;
         }
-        if (event.getClickedInventory() != top) {
-            return;
-        }
+        if (event.getClickedInventory() != top) return;
         switch (holder.type()) {
             case MAIN -> handleMain(event, player, shop);
             case SELECT_SELL_CATEGORY, SELECT_PRICE_CATEGORY -> handleCategoryPicker(event, player, shop, holder);
@@ -157,7 +143,8 @@ public final class ShopListener implements Listener {
     }
 
     private void handleMain(InventoryClickEvent event, Player player, ShopData shop) {
-        boolean manage = plugin.canManage(player, shop.ownerUuid());
+        boolean manage = plugin.canManageShop(player, shop);
+        boolean restock = plugin.canRestockShop(player, shop);
         int slot = event.getSlot();
         if (!shop.isConfigured()) {
             if (manage && slot == ShopMenuService.SETUP_SLOT) {
@@ -166,22 +153,21 @@ public final class ShopListener implements Listener {
             }
             return;
         }
-        if (manage) {
-            if (slot == ShopMenuService.OWNER_STOCK_SLOT) {
-                later(() -> {
-                    Inventory inventory = manager.inventory(shop);
-                    if (inventory == null) {
-                        player.sendMessage(plugin.error("The shop container could not be found."));
-                        return;
-                    }
-                    stockSessions.put(player.getUniqueId(), new StockSession(shop.signKey(),
-                        !shop.isOwner(player.getUniqueId()), cloneContents(inventory.getContents())));
-                    menus.openStock(player, shop);
-                });
-            } else if (slot == ShopMenuService.OWNER_COLLECT_SLOT) {
-                later(() -> menus.collectPayments(player, shop));
-            }
-        } else if (slot == ShopMenuService.BUY_SLOT) {
+        if (restock && slot == ShopMenuService.OWNER_STOCK_SLOT) {
+            later(() -> {
+                Inventory inventory = manager.inventory(shop);
+                if (inventory == null) {
+                    player.sendMessage(plugin.error("The shop container could not be found."));
+                    return;
+                }
+                StockMode mode = manage ? StockMode.FULL : StockMode.RESTOCK_ONLY;
+                stockSessions.put(player.getUniqueId(), new StockSession(shop.signKey(), mode,
+                    plugin.isMasterOverride(player, shop.ownerUuid()), cloneContents(inventory.getContents())));
+                menus.openStock(player, shop);
+            });
+        } else if (manage && slot == ShopMenuService.OWNER_COLLECT_SLOT) {
+            later(() -> menus.collectPayments(player, shop));
+        } else if (!restock && slot == ShopMenuService.BUY_SLOT) {
             later(() -> menus.buy(player, shop));
         } else if (slot == ShopMenuService.CLOSE_SLOT) {
             later(player::closeInventory);
@@ -196,7 +182,6 @@ public final class ShopListener implements Listener {
             return;
         }
         if (slot < 0 || slot >= ShopMenuService.PAGE_SIZE) return;
-
         List<ItemCatalog.Category> categories = ItemCatalog.categories();
         if (slot >= categories.size()) return;
         ItemCatalog.Category category = categories.get(slot);
@@ -219,7 +204,6 @@ public final class ShopListener implements Listener {
             return;
         }
         if (slot < 0 || slot >= ShopMenuService.PAGE_SIZE || holder.category() == null) return;
-
         List<ItemCatalog.Group> groups = ItemCatalog.groups(holder.category());
         if (slot >= groups.size()) return;
         ItemCatalog.Group group = groups.get(slot);
@@ -233,7 +217,6 @@ public final class ShopListener implements Listener {
         ItemCatalog.Group group = holder.group();
         if (group == null) return;
         int slot = event.getSlot();
-
         if (slot == ShopMenuService.BACK_SLOT) {
             ShopMenuType previous = holder.type() == ShopMenuType.SELECT_SELL_ITEM
                 ? ShopMenuType.SELECT_SELL_GROUP : ShopMenuType.SELECT_PRICE_GROUP;
@@ -253,13 +236,11 @@ public final class ShopListener implements Listener {
             return;
         }
         if (slot < 0 || slot >= ShopMenuService.PAGE_SIZE) return;
-
         List<Material> items = ItemCatalog.items(group);
         int index = holder.page() * ShopMenuService.PAGE_SIZE + slot;
         if (index < 0 || index >= items.size()) return;
         Material selected = items.get(index);
         if (!ItemCatalog.isAllowed(selected)) return;
-
         SetupSession session = session(player, shop.signKey());
         if (holder.type() == ShopMenuType.SELECT_SELL_ITEM) {
             session.sellMaterial = selected;
@@ -271,9 +252,7 @@ public final class ShopListener implements Listener {
     }
 
     private void handleAmountPicker(InventoryClickEvent event, Player player, ShopData shop, ShopMenuHolder holder) {
-        if (!ensureCanSetup(player, shop)) {
-            return;
-        }
+        if (!ensureCanSetup(player, shop)) return;
         SetupSession session = session(player, shop.signKey());
         Material material = holder.type() == ShopMenuType.SELECT_SELL_AMOUNT ? session.sellMaterial : session.priceMaterial;
         int slot = event.getSlot();
@@ -298,9 +277,7 @@ public final class ShopListener implements Listener {
             later(() -> menus.openCategoryPicker(player, shop.signKey(), ShopMenuType.SELECT_PRICE_CATEGORY));
         } else {
             session.priceAmount = amount;
-            if (session.complete()) {
-                later(() -> menus.openConfirm(player, shop, session.sellMaterial, session.sellAmount, session.priceMaterial, session.priceAmount));
-            }
+            if (session.complete()) later(() -> menus.openConfirm(player, shop, session.sellMaterial, session.sellAmount, session.priceMaterial, session.priceAmount));
         }
     }
 
@@ -346,27 +323,31 @@ public final class ShopListener implements Listener {
             stockSessions.remove(player.getUniqueId());
             return;
         }
-        if (!plugin.canManage(player, shop.ownerUuid())) {
+        if (!stockAuthorized(player, shop, session)) {
             event.setCancelled(true);
             stockSessions.remove(player.getUniqueId());
-            plugin.getServer().getScheduler().runTask(plugin, () -> player.closeInventory());
-            player.sendMessage(plugin.error("Keep the Master Key in your main hand while managing this shop."));
+            later(player::closeInventory);
+            player.sendMessage(plugin.error("You no longer have access to this shop's stock."));
             return;
         }
         Inventory top = event.getView().getTopInventory();
         boolean clickedTop = event.getRawSlot() >= 0 && event.getRawSlot() < top.getSize();
         ItemStack cursor = event.getCursor();
         ItemStack current = event.getCurrentItem();
+
+        if (session.mode() == StockMode.RESTOCK_ONLY && removesStock(event, clickedTop, current)) {
+            event.setCancelled(true);
+            player.sendMessage(plugin.error("Access-level trust allows restocking but not removing shop stock."));
+            return;
+        }
+
         if (clickedTop) {
             if (isHotbarAction(event.getAction())) {
                 ItemStack moving = null;
                 if (event.getClick() == ClickType.NUMBER_KEY && event.getHotbarButton() >= 0) moving = player.getInventory().getItem(event.getHotbarButton());
                 else if (event.getClick() == ClickType.SWAP_OFFHAND) moving = player.getInventory().getItemInOffHand();
-                if (plugin.masterKeys().isMasterKey(moving)) {
-                    cancelMasterKeyStock(event, player);
-                } else if (!ItemUtil.isEmpty(moving) && moving.getType() != shop.sellMaterial()) {
-                    cancelStock(event, player, shop);
-                }
+                if (plugin.masterKeys().isMasterKey(moving)) cancelMasterKeyStock(event, player);
+                else if (!ItemUtil.isEmpty(moving) && moving.getType() != shop.sellMaterial()) cancelStock(event, player, shop);
                 postCheckMasterKey(player, session);
                 return;
             }
@@ -379,14 +360,35 @@ public final class ShopListener implements Listener {
                 && !ItemUtil.isEmpty(cursor) && cursor.getType() != shop.sellMaterial()) {
                 cancelStock(event, player, shop);
             }
-        } else if (event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY
-            && plugin.masterKeys().isMasterKey(current)) {
+        } else if (event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY && plugin.masterKeys().isMasterKey(current)) {
             cancelMasterKeyStock(event, player);
         } else if (event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY
             && !ItemUtil.isEmpty(current) && current.getType() != shop.sellMaterial()) {
             cancelStock(event, player, shop);
         }
         postCheckMasterKey(player, session);
+    }
+
+    private boolean removesStock(InventoryClickEvent event, boolean clickedTop, ItemStack current) {
+        if (event.getClick() == ClickType.DOUBLE_CLICK || event.getAction() == InventoryAction.COLLECT_TO_CURSOR) return true;
+        if (!clickedTop) return false;
+        if (event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY
+            || event.getAction() == InventoryAction.PICKUP_ALL
+            || event.getAction() == InventoryAction.PICKUP_HALF
+            || event.getAction() == InventoryAction.PICKUP_ONE
+            || event.getAction() == InventoryAction.PICKUP_SOME
+            || event.getAction() == InventoryAction.DROP_ALL_SLOT
+            || event.getAction() == InventoryAction.DROP_ONE_SLOT
+            || event.getAction() == InventoryAction.CLONE_STACK) return true;
+        return (isHotbarAction(event.getAction()) || event.getAction() == InventoryAction.SWAP_WITH_CURSOR)
+            && !ItemUtil.isEmpty(current);
+    }
+
+    private boolean stockAuthorized(Player player, ShopData shop, StockSession session) {
+        if (session.adminOverride() && plugin.masterKeys().canUse(player)) return true;
+        return session.mode() == StockMode.FULL
+            ? plugin.canManageShop(player, shop)
+            : plugin.canRestockShop(player, shop);
     }
 
     private void cancelMasterKeyStock(InventoryClickEvent event, Player player) {
@@ -396,16 +398,10 @@ public final class ShopListener implements Listener {
 
     private void postCheckMasterKey(Player player, StockSession session) {
         if (!session.adminOverride()) return;
-        plugin.getServer().getScheduler().runTask(plugin, () -> {
+        later(() -> {
             ShopData active = manager.bySign(session.signKey());
-            if (!plugin.masterKeys().canUse(player) && (active == null || !stockAuthorized(player, active, session))) {
-                player.closeInventory();
-            }
+            if (!plugin.masterKeys().canUse(player) && (active == null || !stockAuthorized(player, active, session))) player.closeInventory();
         });
-    }
-
-    private boolean stockAuthorized(Player player, ShopData shop, StockSession session) {
-        return session.adminOverride() ? plugin.canManageShop(player, shop) : plugin.canRestockShop(player, shop);
     }
 
     private void cancelStock(InventoryClickEvent event, Player player, ShopData shop) {
@@ -414,7 +410,7 @@ public final class ShopListener implements Listener {
     }
 
     private boolean ensureCanSetup(Player player, ShopData shop) {
-        if (!plugin.canManage(player, shop.ownerUuid())) {
+        if (!plugin.canManageShop(player, shop)) {
             later(player::closeInventory);
             return false;
         }
@@ -435,7 +431,7 @@ public final class ShopListener implements Listener {
     }
 
     private boolean isHotbarAction(InventoryAction action) {
-        return action == InventoryAction.HOTBAR_SWAP;
+        return action == InventoryAction.HOTBAR_SWAP || action == InventoryAction.HOTBAR_MOVE_AND_READD;
     }
 
     private void later(Runnable task) {
@@ -458,6 +454,11 @@ public final class ShopListener implements Listener {
         private boolean complete() { return sellMaterial != null && priceMaterial != null && sellAmount > 0 && priceAmount > 0; }
     }
 
-    private record StockSession(BlockKey signKey, boolean adminOverride, ItemStack[] before) {
+    private enum StockMode {
+        RESTOCK_ONLY,
+        FULL
+    }
+
+    private record StockSession(BlockKey signKey, StockMode mode, boolean adminOverride, ItemStack[] before) {
     }
 }
