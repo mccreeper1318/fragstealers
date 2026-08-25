@@ -14,6 +14,8 @@
 - Fixed issue #11 where valid offline players could be rejected for delegated ownership or trust when their profile was not currently cached.
 - Fixed issue #12 where a newly created lock could appear successful in memory even when `locks.yml` failed to persist; failed lock creates now roll back their in-memory registration.
 - Fixed issue #13 by removing the unreliable anvil search holder and refresh listener and replacing them with organized category, subcategory, and item menus.
+- Fixed shop setup navigation after item selection by adding Back controls to quantity and confirmation screens while preserving the active `SetupSession`, selected materials, quantities, subcategories, and item pages.
+- Added a Back path from price-category selection to the saved sell quantity so earlier sale-item mistakes can be corrected without cancelling and restarting shop setup.
 
 ### Documentation
 
