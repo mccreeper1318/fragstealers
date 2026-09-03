@@ -90,5 +90,3 @@
 +            player.sendMessage(plugin.error("Use the shop sign to access this store."));
              return;
          }
-         if (!stockAuthorized(player, shop, session)) {
-             event.setCancelled(true;
