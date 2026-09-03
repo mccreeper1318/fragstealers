@@ -1,0 +1,94 @@
+--- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/ProtectionListener.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/ProtectionListener.java
+@@ -107,8 +107,13 @@
+         switch (tag) {
+             case "fs" -> createLock(event, player, signBlock, containers, inventory);
+             case "fs shop" -> createShop(event, player, signBlock, containers);
+             case "fs mail" -> createMailbox(event, player, signBlock, containers);
+             default -> {
+             }
+         }
++        if (tag.equals("fs shop") && plugin.shops().bySign(signBlock) != null) {
++            for (var viewer : new ArrayList<>(inventory.getViewers())) {
++                viewer.closeInventory();
++            }
++        }
+     }
+--- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/data/ShopManager.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/ShopManager.java
+@@ -107,21 +107,30 @@
+     public ShopData bySign(Block block) { return bySign.get(BlockKey.from(block)); }
+     public ShopData bySign(BlockKey key) { return bySign.get(key); }
+     public ShopData byContainer(Block block) { return byContainer.get(BlockKey.from(block)); }
+     public ShopData byContainer(BlockKey key) { return byContainer.get(key); }
++
++    public ShopData byInventory(Inventory inventory) {
++        for (Block block : resolver.inventoryBlocks(inventory)) {
++            for (Block connected : resolver.connectedBlocks(block)) {
++                ShopData shop = byContainer(connected);
++                if (shop != null) return shop;
++            }
++        }
++        return null;
++    }
+ 
+     public boolean isProtectedBlock(Block block) {
+         BlockKey key = BlockKey.from(block);
+         return bySign.containsKey(key) || byContainer.containsKey(key);
+     }
+ 
+     public Inventory inventory(ShopData shop) {
+         return resolver.inventory(shop.containerKeys());
+     }
+ 
+     public boolean inventoryBelongs(Inventory inventory, ShopData shop) {
+-        return resolver.inventoryTouches(inventory, block -> byContainer(block) == shop);
++        return byInventory(inventory) == shop;
+     }
+ 
+     public boolean inventoryBelongsToAny(Inventory inventory) {
+-        return resolver.inventoryTouches(inventory, block -> byContainer(block) != null);
++        return byInventory(inventory) != null;
+     }
+--- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopListener.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopListener.java
+@@ -79,4 +79,16 @@
++        ShopData shop = manager.byInventory(top);
+         StockSession session = stockSessions.get(player.getUniqueId());
+-        if (session == null) return;
+-        ShopData shop = manager.bySign(session.signKey());
+-        if (shop == null || !manager.inventoryBelongs(top, shop)) return;
++        if (shop == null) {
++            if (session != null) stockSessions.remove(player.getUniqueId());
++            return;
++        }
++        if (session == null || !shop.signKey().equals(session.signKey())) {
++            event.setCancelled(true);
++            stockSessions.remove(player.getUniqueId());
++            later(player::closeInventory);
++            player.sendMessage(plugin.error("Use the shop sign to access this store."));
++            return;
++        }
+         if (!stockAuthorized(player, shop, session)) {
+             event.setCancelled(true);
+             stockSessions.remove(player.getUniqueId());
+@@ -360,7 +372,18 @@
+         StockSession session = stockSessions.get(player.getUniqueId());
+-        if (session == null) return;
+-        ShopData shop = manager.bySign(session.signKey());
+-        if (shop == null || !manager.inventoryBelongs(event.getView().getTopInventory(), shop)) {
+-            stockSessions.remove(player.getUniqueId());
++        ShopData shop = manager.byInventory(event.getView().getTopInventory());
++        if (shop == null) {
++            if (session != null) stockSessions.remove(player.getUniqueId());
++            return;
++        }
++        if (session == null || !shop.signKey().equals(session.signKey())) {
++            event.setCancelled(true);
++            stockSessions.remove(player.getUniqueId());
++            later(player::closeInventory);
++            player.sendMessage(plugin.error("Use the shop sign to access this store."));
+             return;
+         }
+         if (!stockAuthorized(player, shop, session)) {
+             event.setCancelled(true;
