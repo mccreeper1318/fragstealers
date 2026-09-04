@@ -53,7 +53,7 @@
      }
 --- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/data/ShopManager.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/ShopManager.java
-@@ -166,6 +183,13 @@
+@@ -192,6 +192,13 @@
      private void register(ShopData shop) {
          bySign.put(shop.signKey(), shop);
          for (BlockKey key : shop.containerKeys()) {
@@ -124,7 +124,7 @@
      }
 --- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/data/MailboxManager.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/MailboxManager.java
-@@ -169,4 +186,11 @@
+@@ -186,4 +186,11 @@
      private void register(MailboxData mailbox) {
          bySign.put(mailbox.signKey(), mailbox);
          for (BlockKey key : mailbox.containerKeys()) {
