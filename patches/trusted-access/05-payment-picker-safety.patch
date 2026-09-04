@@ -1,11 +1,13 @@
 --- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemCatalog.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemCatalog.java
-@@ -22,2 +22,7 @@
+@@ -22,2 +22,9 @@
      ));
 +    private static final Set<String> UNSAFE_PAYMENT = Set.of(
-+        "ENCHANTED_BOOK", "WRITTEN_BOOK", "FILLED_MAP", "POTION", "SPLASH_POTION", "LINGERING_POTION",
-+        "TIPPED_ARROW", "SUSPICIOUS_STEW", "FIREWORK_ROCKET", "FIREWORK_STAR", "GOAT_HORN", "OMINOUS_BOTTLE",
-+        "TROPICAL_FISH_BUCKET", "AXOLOTL_BUCKET"
++        "ENCHANTED_BOOK", "WRITTEN_BOOK", "FILLED_MAP", "TIPPED_ARROW", "SUSPICIOUS_STEW", "GOAT_HORN",
++        "OMINOUS_BOTTLE"
++    );
++    private static final Set<String> SAFE_BUCKET_PAYMENT = Set.of(
++        "BUCKET", "WATER_BUCKET", "LAVA_BUCKET", "MILK_BUCKET", "POWDER_SNOW_BUCKET"
 +    );
      private static final List<Material> ITEMS = build();
 @@ -33,3 +38,7 @@
@@ -54,7 +56,7 @@
 +        }
 +        return count;
 +    }
-@@ -59,7 +86,11 @@
+@@ -59,7 +86,18 @@
      public static boolean isAllowed(Material material) {
          if (material == null || !material.isItem() || material.isAir()) {
              return false;
@@ -64,7 +66,14 @@
      }
 +
 +    public static boolean isSafePaymentMaterial(Material material) {
-+        return isAllowed(material) && !UNSAFE_PAYMENT.contains(material.name());
++        if (!isAllowed(material)) return false;
++        String name = material.name();
++        if (UNSAFE_PAYMENT.contains(name)) return false;
++        if (name.endsWith("POTION")) return false;
++        if (name.startsWith("FIREWORK_")) return false;
++        // Entity buckets can carry variant/entity state. New bucketed entities are unsafe by default
++        // until explicitly reviewed, while ordinary fluid/milk/powder-snow buckets remain valid.
++        return !name.endsWith("_BUCKET") || SAFE_BUCKET_PAYMENT.contains(name);
 +    }
 --- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopMenuService.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopMenuService.java
@@ -105,6 +114,19 @@
 +            return;
 +        }
          java.util.function.Predicate<ItemStack> usableStock = item -> !plugin.masterKeys().isMasterKey(item);
+@@ -264,6 +274,11 @@
+     public void collectPayments(Player player, ShopData shop) {
+         if (!shop.isConfigured() || shop.earnings() <= 0) {
+             player.sendMessage(plugin.error("This shop has no payments to collect."));
+             openMain(player, shop);
+             return;
+         }
++        if (!ItemCatalog.isSafePaymentMaterial(shop.priceMaterial())) {
++            player.sendMessage(plugin.error("This legacy shop has stored payments in an unsupported currency. "
++                + "They cannot be reconstructed safely; contact a server administrator to resolve the stored balance."));
++            return;
++        }
+         int fit = ItemUtil.fitAmount(player.getInventory(), shop.priceMaterial(), shop.earnings());
 --- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopListener.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopListener.java
 @@ -204,4 +204,5 @@
@@ -140,3 +162,19 @@
 +            return;
 +        }
          Inventory stock = manager.inventory(shop);
+--- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/ProtectionListener.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/ProtectionListener.java
+@@ -7,1 +7,2 @@
++import me.pinnacle.fragstealers.shop.ItemCatalog;
+ import me.pinnacle.fragstealers.shop.ItemUtil;
+@@ -273,3 +274,9 @@
+-            plugin.shopMenus().closeViewers(shopSign);
+             long payments = shopSign.earnings();
++            if (shopSign.isConfigured() && payments > 0 && !ItemCatalog.isSafePaymentMaterial(shopSign.priceMaterial())) {
++                event.setCancelled(true);
++                player.sendMessage(plugin.error("This legacy shop has stored payments in an unsupported currency and cannot be removed automatically. "
++                    + "Contact a server administrator to resolve the stored balance safely."));
++                return;
++            }
++            plugin.shopMenus().closeViewers(shopSign);
+             if (shopSign.isConfigured() && payments > 0) {
