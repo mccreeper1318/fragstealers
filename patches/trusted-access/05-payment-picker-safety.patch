@@ -107,19 +107,19 @@
          java.util.function.Predicate<ItemStack> usableStock = item -> !plugin.masterKeys().isMasterKey(item);
 --- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopListener.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopListener.java
-@@ -207,4 +207,5 @@
+@@ -204,4 +204,5 @@
 -        List<ItemCatalog.Category> categories = ItemCatalog.categories();
 +        List<ItemCatalog.Category> categories = holder.type() == ShopMenuType.SELECT_PRICE_CATEGORY
 +            ? ItemCatalog.paymentCategories() : ItemCatalog.categories();
          if (slot >= categories.size()) return;
          ItemCatalog.Category category = categories.get(slot);
-@@ -229,4 +230,5 @@
+@@ -226,4 +227,5 @@
 -        List<ItemCatalog.Group> groups = ItemCatalog.groups(holder.category());
 +        List<ItemCatalog.Group> groups = holder.type() == ShopMenuType.SELECT_PRICE_GROUP
 +            ? ItemCatalog.paymentGroups(holder.category()) : ItemCatalog.groups(holder.category());
          if (slot >= groups.size()) return;
          ItemCatalog.Group group = groups.get(slot);
-@@ -261,6 +263,8 @@
+@@ -258,6 +260,8 @@
 -        List<Material> items = ItemCatalog.items(group);
 +        List<Material> items = holder.type() == ShopMenuType.SELECT_PRICE_ITEM
 +            ? ItemCatalog.paymentItems(group) : ItemCatalog.items(group);
@@ -129,7 +129,7 @@
          if (!ItemCatalog.isAllowed(selected)) return;
 +        if (holder.type() == ShopMenuType.SELECT_PRICE_ITEM && !ItemCatalog.isSafePaymentMaterial(selected)) return;
          SetupSession session = session(player, shop.signKey());
-@@ -345,5 +349,11 @@
+@@ -342,5 +346,11 @@
          if (session == null || !session.complete()) {
              player.sendMessage(plugin.error("Shop setup was incomplete."));
              return;
