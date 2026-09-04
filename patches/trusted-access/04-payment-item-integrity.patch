@@ -1,0 +1,48 @@
+--- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopMenuService.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopMenuService.java
+@@ -90,7 +90,8 @@
+             inventory.setItem(BUY_SLOT, namedItem(Material.LIME_STAINED_GLASS_PANE, "Buy Item", NamedTextColor.GREEN,
+                 List.of(
+                     Component.text("Receive: " + shop.sellAmount() + " " + ItemCatalog.display(shop.sellMaterial()), NamedTextColor.GRAY),
+-                    Component.text("Cost: " + shop.priceAmount() + " " + ItemCatalog.display(shop.priceMaterial()), NamedTextColor.GRAY)
++                    Component.text("Cost: " + shop.priceAmount() + " " + ItemCatalog.display(shop.priceMaterial()), NamedTextColor.GRAY),
++                    Component.text("Payment items must be plain and unmodified.", NamedTextColor.DARK_GRAY)
+                 )));
+             inventory.setItem(CLOSE_SLOT, namedItem(Material.RED_STAINED_GLASS_PANE, "Close", NamedTextColor.RED, List.of()));
+         }
+@@ -232,25 +233,29 @@
+-        java.util.function.Predicate<ItemStack> usable = item -> !plugin.masterKeys().isMasterKey(item);
+-        if (ItemUtil.count(stock, shop.sellMaterial(), usable) < shop.sellAmount()) {
++        java.util.function.Predicate<ItemStack> usableStock = item -> !plugin.masterKeys().isMasterKey(item);
++        ItemStack paymentTemplate = new ItemStack(shop.priceMaterial());
++        java.util.function.Predicate<ItemStack> eligiblePayment = item ->
++            !plugin.masterKeys().isMasterKey(item) && item.isSimilar(paymentTemplate);
++        if (ItemUtil.count(stock, shop.sellMaterial(), usableStock) < shop.sellAmount()) {
+             player.sendMessage(plugin.error("This shop does not have enough stock."));
+             return;
+         }
+-        if (ItemUtil.count(player.getInventory(), shop.priceMaterial(), usable) < shop.priceAmount()) {
+-            player.sendMessage(plugin.error("You do not have enough " + ItemCatalog.display(shop.priceMaterial()) + "."));
++        if (ItemUtil.count(player.getInventory(), shop.priceMaterial(), eligiblePayment) < shop.priceAmount()) {
++            player.sendMessage(plugin.error("You do not have enough plain " + ItemCatalog.display(shop.priceMaterial())
++                + ". Damaged, enchanted, filled, named, or otherwise modified items cannot be used as payment."));
+             return;
+         }
+-        List<ItemStack> incoming = ItemUtil.peek(stock, shop.sellMaterial(), shop.sellAmount(), usable);
+-        if (incoming.isEmpty() || !ItemUtil.canFitAfterPayment(player.getInventory(), shop.priceMaterial(), shop.priceAmount(), incoming, usable)) {
++        List<ItemStack> incoming = ItemUtil.peek(stock, shop.sellMaterial(), shop.sellAmount(), usableStock);
++        if (incoming.isEmpty() || !ItemUtil.canFitAfterPayment(player.getInventory(), shop.priceMaterial(), shop.priceAmount(), incoming, eligiblePayment)) {
+             player.sendMessage(plugin.error("You do not have enough inventory room for this purchase."));
+             return;
+         }
+-        List<ItemStack> sold = ItemUtil.take(stock, shop.sellMaterial(), shop.sellAmount(), usable);
++        List<ItemStack> sold = ItemUtil.take(stock, shop.sellMaterial(), shop.sellAmount(), usableStock);
+         if (sold.isEmpty()) {
+             player.sendMessage(plugin.error("This shop does not have enough stock."));
+             return;
+         }
+-        ItemUtil.remove(player.getInventory(), shop.priceMaterial(), shop.priceAmount(), usable);
++        ItemUtil.remove(player.getInventory(), shop.priceMaterial(), shop.priceAmount(), eligiblePayment);
+         for (ItemStack item : sold) player.getInventory().addItem(item);
+         shop.addEarnings(shop.priceAmount());
+         manager.save();
