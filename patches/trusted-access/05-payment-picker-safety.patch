@@ -78,7 +78,7 @@
 -                List.of(Component.text(ItemCatalog.itemCount(category) + " items", NamedTextColor.GRAY),
 +                List.of(Component.text((payment ? ItemCatalog.paymentItemCount(category) : ItemCatalog.itemCount(category)) + " items", NamedTextColor.GRAY),
                      Component.text("Click to browse subcategories.", NamedTextColor.DARK_GRAY))));
-@@ -130,7 +132,9 @@
+@@ -129,7 +131,9 @@
 -        List<ItemCatalog.Group> groups = ItemCatalog.groups(category);
 +        boolean payment = type == ShopMenuType.SELECT_PRICE_GROUP;
 +        List<ItemCatalog.Group> groups = payment ? ItemCatalog.paymentGroups(category) : ItemCatalog.groups(category);
@@ -88,7 +88,7 @@
 -                List.of(Component.text(ItemCatalog.items(group).size() + " items", NamedTextColor.GRAY),
 +                List.of(Component.text((payment ? ItemCatalog.paymentItems(group).size() : ItemCatalog.items(group).size()) + " items", NamedTextColor.GRAY),
                      Component.text("Click to view items.", NamedTextColor.DARK_GRAY))));
-@@ -144,1 +148,2 @@
+@@ -142,1 +146,2 @@
 -        List<Material> items = ItemCatalog.items(group);
 +        boolean payment = type == ShopMenuType.SELECT_PRICE_ITEM;
 +        List<Material> items = payment ? ItemCatalog.paymentItems(group) : ItemCatalog.items(group);
