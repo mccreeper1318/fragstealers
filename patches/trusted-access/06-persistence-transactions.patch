@@ -53,7 +53,7 @@
      }
 --- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/data/ShopManager.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/ShopManager.java
-@@ -189,6 +189,13 @@
+@@ -190,6 +190,13 @@
      private void register(ShopData shop) {
          bySign.put(shop.signKey(), shop);
          for (BlockKey key : shop.containerKeys()) {
