@@ -212,7 +212,7 @@
 +        if (save()) return true;
 +        entries.computeIfAbsent(key, ignored -> new LinkedHashMap<>()).put(playerUuid, removed);
 +        return false;
-@@ -143,5 +165,15 @@
+@@ -141,5 +141,15 @@
 -    public void clear(ProtectionType type, BlockKey signKey) {
 -        if (entries.remove(new TargetKey(type, signKey)) != null) {
 -            save();
