@@ -1,0 +1,151 @@
+--- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/FragStealersCommand.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/FragStealersCommand.java
+@@ -87,4 +87,8 @@
+-        plugin.trust().trust(target, trusted.getUniqueId(), trusted.getName(), level);
++        if (!plugin.trust().trust(target, trusted.getUniqueId(), trusted.getName(), level)) {
++            owner.sendMessage(plugin.error("Could not save this trust change. Nothing was changed."));
++            return true;
++        }
+         owner.sendMessage(plugin.success(trusted.getName() + " now has " + level.displayName()
+@@ -100,5 +104,9 @@
+         TrustEntry entry = plugin.trust().findByName(target, playerName);
+-        if (entry == null || !plugin.trust().untrust(target, entry.playerUuid())) {
++        if (entry == null) {
+             owner.sendMessage(plugin.error(playerName + " is not trusted on this protection."));
+             return true;
+         }
++        if (!plugin.trust().untrust(target, entry.playerUuid())) {
++            owner.sendMessage(plugin.error("Could not save this trust change. Nothing was changed."));
++            return true;
++        }
+         owner.sendMessage(plugin.success("Removed " + entry.playerName() + " from this protection's trust list."));
+--- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemUtil.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemUtil.java
+@@ -208,1 +208,5 @@
++    public static ItemStack[] copyContents(ItemStack[] contents) {
++        return cloneContents(contents);
++    }
++
+     private static ItemStack[] cloneContents(ItemStack[] contents) {
+--- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/mail/MailboxMenuService.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/mail/MailboxMenuService.java
+@@ -35,3 +35,4 @@
+     private final NamespacedKey placeholderKey;
+     private final Map<BlockKey, UUID> activePickup = new HashMap<>();
+     private final Map<BlockKey, Set<UUID>> activeDeposits = new HashMap<>();
++    private final Map<UUID, PickupSnapshot> pickupSnapshots = new HashMap<>();
+@@ -110,4 +111,6 @@
+         }
+         activePickup.put(mailbox.signKey(), player.getUniqueId());
++        pickupSnapshots.put(player.getUniqueId(), new PickupSnapshot(
++            ItemUtil.copyContents(player.getInventory().getContents()), cloneItem(player.getItemOnCursor())));
+         ItemStack[] before = mailbox.copyContents();
+@@ -139,6 +142,19 @@
+     public void releaseViewer(UUID viewer) {
++        pickupSnapshots.remove(viewer);
+         activePickup.entrySet().removeIf(entry -> entry.getValue().equals(viewer));
+         activeDeposits.entrySet().removeIf(entry -> {
+             entry.getValue().remove(viewer);
+             return entry.getValue().isEmpty();
+         });
+     }
++
++    public void commitPickup(Player player) {
++        pickupSnapshots.remove(player.getUniqueId());
++    }
++
++    public void rollbackPickup(Player player) {
++        PickupSnapshot snapshot = pickupSnapshots.remove(player.getUniqueId());
++        if (snapshot == null) return;
++        player.getInventory().setContents(ItemUtil.copyContents(snapshot.contents()));
++        player.setItemOnCursor(snapshot.cursor() == null ? new ItemStack(Material.AIR) : snapshot.cursor().clone());
++    }
+@@ -184,1 +200,10 @@
++    private ItemStack cloneItem(ItemStack item) {
++        return ItemUtil.isEmpty(item) ? null : item.clone();
++    }
++
++    private record PickupSnapshot(ItemStack[] contents, ItemStack cursor) {
++        private PickupSnapshot {
++            contents = ItemUtil.copyContents(contents);
++            cursor = ItemUtil.isEmpty(cursor) ? null : cursor.clone();
++        }
++    }
++
+     private ItemStack placeholder() {
+--- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/mail/MailboxListener.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/mail/MailboxListener.java
+@@ -245,32 +245,43 @@
+     private void finishDeposit(Player player, Inventory inventory, MailboxMenuHolder holder) {
+         menus.releaseDeposit(holder.signKey(), player.getUniqueId());
+         MailboxData mailbox = manager.bySign(holder.signKey());
+         boolean accepting = mailbox != null && plugin.mailEnabled();
++        ItemStack[] before = accepting ? mailbox.copyContents() : null;
++        List<ItemStack> submitted = new ArrayList<>();
+         List<ItemStack> returnItems = new ArrayList<>();
+         boolean accepted = false;
+         for (int slot = 0; slot < inventory.getSize(); slot++) {
+             if (holder.blocked(slot)) continue;
+             ItemStack item = inventory.getItem(slot);
+             if (ItemUtil.isEmpty(item) || menus.isPlaceholder(item)) continue;
++            submitted.add(item.clone());
+             if (plugin.masterKeys().isMasterKey(item)) {
+                 returnItems.add(item.clone());
+                 continue;
+             }
+             if (accepting && mailbox.getItem(slot) == null) {
+                 mailbox.setItem(slot, item);
+                 accepted = true;
+             } else {
+                 returnItems.add(item.clone());
+             }
+         }
+-        if (!returnItems.isEmpty()) ItemUtil.giveOrDrop(player, returnItems);
+         if (mailbox != null && accepted) {
+-            manager.save();
++            if (!manager.save()) {
++                mailbox.replaceContents(before);
++                if (!submitted.isEmpty()) ItemUtil.giveOrDrop(player, submitted);
++                player.sendMessage(plugin.error("Could not save this mail deposit. Your items were returned."));
++                return;
++            }
++            if (!returnItems.isEmpty()) ItemUtil.giveOrDrop(player, returnItems);
+             menus.notifyOwner(mailbox);
+             player.sendMessage(plugin.success("Mail deposited for " + mailbox.ownerName() + "."));
+-        } else if (!accepting && !returnItems.isEmpty()) {
+-            player.sendMessage(plugin.error("Mailbox deposits are currently disabled. Your items were returned."));
++        } else {
++            if (!returnItems.isEmpty()) ItemUtil.giveOrDrop(player, returnItems);
++            if (!accepting && !returnItems.isEmpty()) {
++                player.sendMessage(plugin.error("Mailbox deposits are currently disabled. Your items were returned."));
++            }
+         }
+     }
+@@ -280,15 +291,23 @@
+         menus.releasePickup(holder.signKey(), player.getUniqueId());
+-        if (mailbox == null) return;
++        if (mailbox == null) {
++            menus.commitPickup(player);
++            return;
++        }
+         ItemStack[] after = inventory.getContents();
+         List<ItemStack> rejected = new ArrayList<>();
+         for (int slot = 0; slot < after.length; slot++) {
+             ItemStack item = after[slot];
+             if (plugin.masterKeys().isMasterKey(item) || menus.isPlaceholder(item)) {
+                 if (!ItemUtil.isEmpty(item) && !menus.isPlaceholder(item)) rejected.add(item.clone());
+                 after[slot] = null;
+             }
+         }
+-        if (!rejected.isEmpty()) ItemUtil.giveOrDrop(player, rejected);
+         mailbox.replaceContents(after);
+-        manager.save();
++        if (!manager.save()) {
++            mailbox.replaceContents(holder.before());
++            menus.rollbackPickup(player);
++            player.sendMessage(plugin.error("Could not save this mailbox change. Nothing was changed."));
++            return;
++        }
++        menus.commitPickup(player);
++        if (!rejected.isEmpty()) ItemUtil.giveOrDrop(player, rejected);
+         if (holder.adminOverride()) {
