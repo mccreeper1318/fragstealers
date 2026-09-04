@@ -1,6 +1,6 @@
 --- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopMenuService.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopMenuService.java
-@@ -90,7 +90,8 @@
+@@ -89,7 +89,8 @@
              inventory.setItem(BUY_SLOT, namedItem(Material.LIME_STAINED_GLASS_PANE, "Buy Item", NamedTextColor.GREEN,
                  List.of(
                      Component.text("Receive: " + shop.sellAmount() + " " + ItemCatalog.display(shop.sellMaterial()), NamedTextColor.GRAY),
