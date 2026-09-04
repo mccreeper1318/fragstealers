@@ -1,6 +1,6 @@
 --- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/FragStealersCommand.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/FragStealersCommand.java
-@@ -87,4 +87,8 @@
+@@ -88,4 +88,8 @@
 -        plugin.trust().trust(target, trusted.getUniqueId(), trusted.getName(), level);
 +        if (!plugin.trust().trust(target, trusted.getUniqueId(), trusted.getName(), level)) {
 +            owner.sendMessage(plugin.error("Could not save this trust change. Nothing was changed."));
@@ -21,7 +21,7 @@
          owner.sendMessage(plugin.success("Removed " + entry.playerName() + " from this protection's trust list."));
 --- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemUtil.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemUtil.java
-@@ -208,1 +208,5 @@
+@@ -209,1 +209,5 @@
 +    public static ItemStack[] copyContents(ItemStack[] contents) {
 +        return cloneContents(contents);
 +    }
@@ -29,18 +29,18 @@
      private static ItemStack[] cloneContents(ItemStack[] contents) {
 --- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/mail/MailboxMenuService.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/mail/MailboxMenuService.java
-@@ -35,3 +35,4 @@
+@@ -34,3 +34,4 @@
      private final NamespacedKey placeholderKey;
      private final Map<BlockKey, UUID> activePickup = new HashMap<>();
      private final Map<BlockKey, Set<UUID>> activeDeposits = new HashMap<>();
 +    private final Map<UUID, PickupSnapshot> pickupSnapshots = new HashMap<>();
-@@ -110,4 +111,6 @@
+@@ -109,4 +110,6 @@
          }
          activePickup.put(mailbox.signKey(), player.getUniqueId());
 +        pickupSnapshots.put(player.getUniqueId(), new PickupSnapshot(
 +            ItemUtil.copyContents(player.getInventory().getContents()), cloneItem(player.getItemOnCursor())));
          ItemStack[] before = mailbox.copyContents();
-@@ -139,6 +142,19 @@
+@@ -138,6 +141,19 @@
      public void releaseViewer(UUID viewer) {
 +        pickupSnapshots.remove(viewer);
          activePickup.entrySet().removeIf(entry -> entry.getValue().equals(viewer));
@@ -60,7 +60,7 @@
 +        player.getInventory().setContents(ItemUtil.copyContents(snapshot.contents()));
 +        player.setItemOnCursor(snapshot.cursor() == null ? new ItemStack(Material.AIR) : snapshot.cursor().clone());
 +    }
-@@ -184,1 +200,10 @@
+@@ -164,1 +180,10 @@
 +    private ItemStack cloneItem(ItemStack item) {
 +        return ItemUtil.isEmpty(item) ? null : item.clone();
 +    }
@@ -121,7 +121,7 @@
 +            }
          }
      }
-@@ -280,15 +291,23 @@
+@@ -278,15 +289,23 @@
          menus.releasePickup(holder.signKey(), player.getUniqueId());
 -        if (mailbox == null) return;
 +        if (mailbox == null) {
