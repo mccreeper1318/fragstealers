@@ -47,7 +47,7 @@
      }
 --- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/data/ShopManager.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/ShopManager.java
-@@ -184,6 +184,13 @@
+@@ -178,6 +178,13 @@
      private void register(ShopData shop) {
          bySign.put(shop.signKey(), shop);
          for (BlockKey key : shop.containerKeys()) {
@@ -75,7 +75,7 @@
  import java.util.Map;
  import java.util.Optional;
  import java.util.Set;
-@@ -24,6 +24,7 @@
+@@ -24,6 +25,7 @@
      private final ContainerResolver resolver;
      private final File dataFile;
      private final Map<BlockKey, MailboxData> bySign = new HashMap<>();
@@ -83,13 +83,13 @@
 +    private final Set<BlockKey> persistenceBlocked = new HashSet<>();
  
      public MailboxManager(FragStealers plugin, ContainerResolver resolver) {
-@@ -36,4 +36,5 @@
+@@ -36,4 +38,5 @@
      public void load() {
          bySign.clear();
          byContainer.clear();
 +        persistenceBlocked.clear();
          YamlConfiguration data = YamlConfiguration.loadConfiguration(dataFile);
-@@ -78,34 +78,45 @@
+@@ -78,34 +81,45 @@
 -    public void save() {
 +    public boolean save() {
          YamlConfiguration data = new YamlConfiguration();
@@ -135,9 +135,7 @@
 +        persistenceBlocked.remove(mailbox.signKey());
 +        return true;
      }
---- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/data/MailboxManager.java
-+++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/MailboxManager.java
-@@ -147,3 +147,32 @@
+@@ -147,3 +161,32 @@
      public boolean ownerHasMail(UUID owner) {
          return bySign.values().stream().anyMatch(mailbox -> mailbox.ownerUuid().equals(owner) && mailbox.hasMail());
      }
@@ -169,9 +167,7 @@
 +            retryQuarantinedSave(signKey);
 +        }, 100L);
 +    }
---- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/data/MailboxManager.java
-+++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/MailboxManager.java
-@@ -170,4 +170,11 @@
+@@ -159,8 +202,15 @@
      private void register(MailboxData mailbox) {
          bySign.put(mailbox.signKey(), mailbox);
          for (BlockKey key : mailbox.containerKeys()) {
