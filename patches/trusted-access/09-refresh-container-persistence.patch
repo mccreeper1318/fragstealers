@@ -1,0 +1,131 @@
+--- fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/ShopManager.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/ShopManager.java
+@@ -156,23 +156,26 @@
+     public void refreshContainers(ShopData shop) {
+-        boolean changed = false;
++        Set<BlockKey> added = new LinkedHashSet<>();
+         for (BlockKey existing : new ArrayList<>(shop.containerKeys())) {
+             Block block = existing.block();
+             if (block == null || !resolver.isSupported(block)) {
+                 continue;
+             }
+             for (Block connected : resolver.connectedBlocks(block)) {
+                 BlockKey key = BlockKey.from(connected);
+                 ShopData conflict = byContainer.get(key);
+                 if (conflict != null && conflict != shop) {
+                     continue;
+                 }
+                 if (shop.addContainer(key)) {
+-                    changed = true;
++                    added.add(key);
+                 }
+                 byContainer.put(key, shop);
+             }
+         }
+-        if (changed) {
+-            save();
++        if (!added.isEmpty() && !save()) {
++            for (BlockKey key : added) {
++                shop.removeContainer(key);
++                byContainer.remove(key, shop);
++            }
+         }
+     }
+--- fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/MailboxManager.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/MailboxManager.java
+@@ -140,23 +140,26 @@
+     public void refreshContainers(MailboxData mailbox) {
+-        boolean changed = false;
++        Set<BlockKey> added = new LinkedHashSet<>();
+         for (BlockKey existing : new ArrayList<>(mailbox.containerKeys())) {
+             Block block = existing.block();
+             if (block == null || !resolver.isSupported(block)) {
+                 continue;
+             }
+             for (Block connected : resolver.connectedBlocks(block)) {
+                 BlockKey key = BlockKey.from(connected);
+                 MailboxData conflict = byContainer.get(key);
+                 if (conflict != null && conflict != mailbox) {
+                     continue;
+                 }
+                 if (mailbox.addContainer(key)) {
+-                    changed = true;
++                    added.add(key);
+                 }
+                 byContainer.put(key, mailbox);
+             }
+         }
+-        if (changed) {
+-            save();
++        if (!added.isEmpty() && !save()) {
++            for (BlockKey key : added) {
++                mailbox.removeContainer(key);
++                byContainer.remove(key, mailbox);
++            }
+         }
+     }
+--- fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/LockManager.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/LockManager.java
+@@ -133,23 +133,26 @@
+     public void refreshContainers(ChestLock lock) {
+-        boolean changed = false;
++        Set<BlockKey> added = new LinkedHashSet<>();
+         for (BlockKey existing : new ArrayList<>(lock.containerKeys())) {
+             Block block = existing.block();
+             if (block == null || !resolver.isSupported(block)) {
+                 continue;
+             }
+             for (Block connected : resolver.connectedBlocks(block)) {
+                 BlockKey key = BlockKey.from(connected);
+                 ChestLock conflict = byContainer.get(key);
+                 if (conflict != null && conflict != lock) {
+                     continue;
+                 }
+                 if (lock.addContainer(key)) {
+-                    changed = true;
++                    added.add(key);
+                 }
+                 byContainer.put(key, lock);
+             }
+         }
+-        if (changed) {
+-            save();
++        if (!added.isEmpty() && !save()) {
++            for (BlockKey key : added) {
++                lock.removeContainer(key);
++                byContainer.remove(key, lock);
++            }
+         }
+     }
+--- fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/ShopData.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/ShopData.java
+@@ -35,4 +35,5 @@
+     public BlockKey signKey() { return signKey; }
+     public Set<BlockKey> containerKeys() { return Collections.unmodifiableSet(containerKeys); }
+     public boolean addContainer(BlockKey key) { return containerKeys.add(key); }
++    public boolean removeContainer(BlockKey key) { return containerKeys.remove(key); }
+     public UUID ownerUuid() { return ownerUuid; }
+--- fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/MailboxData.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/MailboxData.java
+@@ -25,4 +25,5 @@
+     public BlockKey signKey() { return signKey; }
+     public Set<BlockKey> containerKeys() { return Collections.unmodifiableSet(containerKeys); }
+     public boolean addContainer(BlockKey key) { return containerKeys.add(key); }
++    public boolean removeContainer(BlockKey key) { return containerKeys.remove(key); }
+     public UUID ownerUuid() { return ownerUuid; }
+--- fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/ChestLock.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/ChestLock.java
+@@ -23,9 +23,13 @@
+     public Set<BlockKey> containerKeys() {
+         return Collections.unmodifiableSet(containerKeys);
+     }
+ 
+     public boolean addContainer(BlockKey key) {
+         return containerKeys.add(key);
+     }
++
++    public boolean removeContainer(BlockKey key) {
++        return containerKeys.remove(key);
++    }
+ 
+     public BlockKey signKey() {
