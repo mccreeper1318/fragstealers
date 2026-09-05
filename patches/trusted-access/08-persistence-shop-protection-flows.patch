@@ -105,7 +105,7 @@
 +            }
 +            mailboxSign.clear();
 +            ItemUtil.giveOrDrop(player, mail);
-@@ -413,1 +446,7 @@
+@@ -420,1 +446,7 @@
 +        BlockKey lockSignKey = BlockKey.from(sign);
 +        if (!plugin.trust().clear(ProtectionType.LOCK, lockSignKey)) {
 +            event.setCancelled(true);
@@ -126,7 +126,7 @@
 +            player.sendMessage(plugin.error("Could not save this shop. Nothing was created."));
 +            return;
 +        }
-@@ -547,2 +594,10 @@
+@@ -504,2 +594,10 @@
          MailboxData mailbox = new MailboxData(BlockKey.from(sign), keys, ownerUuid, ownerName);
 -        plugin.mailboxes().add(mailbox);
 +        if (!plugin.trust().clear(ProtectionType.MAILBOX, mailbox.signKey())) {
