@@ -1,0 +1,263 @@
+--- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/data/ShopManager.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/ShopManager.java
+@@ -76,31 +76,42 @@
+-    public void save() {
++    public boolean save() {
+         YamlConfiguration data = new YamlConfiguration();
+         for (ShopData shop : bySign.values()) {
+             String path = "shops." + shop.signKey().encoded();
+             data.set(path + ".sign", shop.signKey().serialize());
+             data.set(path + ".owner-uuid", shop.ownerUuid().toString());
+             data.set(path + ".owner-name", shop.ownerName());
+             data.set(path + ".configured", shop.isConfigured());
+             data.set(path + ".sell-material", shop.sellMaterial() == null ? null : shop.sellMaterial().name());
+             data.set(path + ".sell-amount", shop.sellAmount());
+             data.set(path + ".price-material", shop.priceMaterial() == null ? null : shop.priceMaterial().name());
+             data.set(path + ".price-amount", shop.priceAmount());
+             data.set(path + ".earnings", shop.isConfigured() ? shop.earnings() : 0L);
+             data.set(path + ".containers", shop.containerKeys().stream().map(BlockKey::serialize).toList());
+         }
+-        AtomicYaml.save(plugin, data, dataFile);
++        return AtomicYaml.save(plugin, data, dataFile);
+     }
+ 
+-    public void add(ShopData shop) {
++    public boolean add(ShopData shop) {
+         register(shop);
+-        save();
++        if (!save()) {
++            unregister(shop);
++            return false;
++        }
++        return true;
+     }
+ 
+-    public void remove(ShopData shop) {
+-        bySign.remove(shop.signKey());
+-        for (BlockKey key : shop.containerKeys()) {
+-            byContainer.remove(key, shop);
++    public boolean remove(ShopData shop) {
++        unregister(shop);
++        if (!save()) {
++            register(shop);
++            return false;
+         }
+-        save();
++        return true;
+     }
+--- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/data/ShopManager.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/ShopManager.java
+@@ -178,6 +178,13 @@
+     private void register(ShopData shop) {
+         bySign.put(shop.signKey(), shop);
+         for (BlockKey key : shop.containerKeys()) {
+             byContainer.put(key, shop);
+         }
+     }
++
++    private void unregister(ShopData shop) {
++        bySign.remove(shop.signKey(), shop);
++        for (BlockKey key : shop.containerKeys()) {
++            byContainer.remove(key, shop);
++        }
++    }
+ 
+     private Material material(String value) {
+--- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/data/MailboxManager.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/MailboxManager.java
+@@ -13,9 +13,10 @@
+ import java.io.File;
+ import java.util.ArrayList;
+ import java.util.HashMap;
++import java.util.HashSet;
+ import java.util.LinkedHashSet;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.Optional;
+ import java.util.Set;
+@@ -25,5 +25,6 @@
+     private final ContainerResolver resolver;
+     private final File dataFile;
+     private final Map<BlockKey, MailboxData> bySign = new HashMap<>();
+     private final Map<BlockKey, MailboxData> byContainer = new HashMap<>();
++    private final Set<BlockKey> persistenceBlocked = new HashSet<>();
+ 
+@@ -36,4 +38,5 @@
+     public void load() {
+         bySign.clear();
+         byContainer.clear();
++        persistenceBlocked.clear();
+         YamlConfiguration data = YamlConfiguration.loadConfiguration(dataFile);
+@@ -78,34 +81,45 @@
+-    public void save() {
++    public boolean save() {
+         YamlConfiguration data = new YamlConfiguration();
+         for (MailboxData mailbox : bySign.values()) {
+             String path = "mailboxes." + mailbox.signKey().encoded();
+             data.set(path + ".sign", mailbox.signKey().serialize());
+             data.set(path + ".owner-uuid", mailbox.ownerUuid().toString());
+             data.set(path + ".owner-name", mailbox.ownerName());
+             data.set(path + ".containers", mailbox.containerKeys().stream().map(BlockKey::serialize).toList());
+             for (int slot = 0; slot < mailbox.capacity(); slot++) {
+                 ItemStack item = mailbox.getItem(slot);
+                 if (item != null) {
+                     data.set(path + ".items." + slot, item);
+                 }
+             }
+         }
+-        AtomicYaml.save(plugin, data, dataFile);
++        return AtomicYaml.save(plugin, data, dataFile);
+     }
+ 
+-    public void add(MailboxData mailbox) {
++    public boolean add(MailboxData mailbox) {
+         register(mailbox);
+-        save();
++        if (!save()) {
++            unregister(mailbox);
++            return false;
++        }
++        return true;
+     }
+ 
+-    public void remove(MailboxData mailbox) {
+-        bySign.remove(mailbox.signKey());
+-        for (BlockKey key : mailbox.containerKeys()) {
+-            byContainer.remove(key, mailbox);
++    public boolean remove(MailboxData mailbox) {
++        unregister(mailbox);
++        if (!save()) {
++            register(mailbox);
++            return false;
+         }
+-        save();
++        persistenceBlocked.remove(mailbox.signKey());
++        return true;
+     }
+@@ -147,3 +161,32 @@
+     public boolean ownerHasMail(UUID owner) {
+         return bySign.values().stream().anyMatch(mailbox -> mailbox.ownerUuid().equals(owner) && mailbox.hasMail());
+     }
++
++    public boolean isPersistenceBlocked(BlockKey signKey) {
++        return persistenceBlocked.contains(signKey);
++    }
++
++    public void quarantineUntilSaved(MailboxData mailbox) {
++        BlockKey signKey = mailbox.signKey();
++        if (!persistenceBlocked.add(signKey)) return;
++        plugin.getLogger().severe("Mailbox persistence recovery is pending at " + signKey.serialize()
++            + "; access is blocked until the recovery state can be saved.");
++        retryQuarantinedSave(signKey);
++    }
++
++    private void retryQuarantinedSave(BlockKey signKey) {
++        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
++            if (!persistenceBlocked.contains(signKey)) return;
++            if (!bySign.containsKey(signKey)) {
++                persistenceBlocked.remove(signKey);
++                return;
++            }
++            if (save()) {
++                persistenceBlocked.remove(signKey);
++                plugin.getLogger().warning("Mailbox persistence recovery completed at " + signKey.serialize() + ".");
++                return;
++            }
++            retryQuarantinedSave(signKey);
++        }, 100L);
++    }
+@@ -159,8 +202,15 @@
+     private void register(MailboxData mailbox) {
+         bySign.put(mailbox.signKey(), mailbox);
+         for (BlockKey key : mailbox.containerKeys()) {
+             byContainer.put(key, mailbox);
+         }
+     }
++
++    private void unregister(MailboxData mailbox) {
++        bySign.remove(mailbox.signKey(), mailbox);
++        for (BlockKey key : mailbox.containerKeys()) {
++            byContainer.remove(key, mailbox);
++        }
++    }
+ }
+--- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/data/LockManager.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/LockManager.java
+@@ -157,4 +157,10 @@
+-    public void remove(ChestLock lock) {
++    public boolean remove(ChestLock lock) {
+         unregister(lock);
+-        save();
++        if (!save()) {
++            register(lock);
++            return false;
++        }
++        return true;
+     }
+--- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/TrustManager.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/TrustManager.java
+@@ -75,16 +75,16 @@
+-    public void save() {
++    public boolean save() {
+         YamlConfiguration data = new YamlConfiguration();
+         for (Map.Entry<TargetKey, Map<UUID, TrustEntry>> targetEntry : entries.entrySet()) {
+             TargetKey target = targetEntry.getKey();
+             String base = "protections." + target.type().name().toLowerCase(Locale.ROOT) + "."
+                 + target.signKey().encoded();
+             data.set(base + ".sign", target.signKey().serialize());
+             for (TrustEntry entry : targetEntry.getValue().values()) {
+                 String path = base + ".players." + entry.playerUuid();
+                 data.set(path + ".name", entry.playerName());
+                 data.set(path + ".level", entry.level().name());
+             }
+         }
+-        AtomicYaml.save(plugin, data, dataFile);
++        return AtomicYaml.save(plugin, data, dataFile);
+     }
+@@ -101,5 +101,18 @@
+-    public void trust(ProtectedTarget target, UUID playerUuid, String playerName, TrustLevel level) {
++    public boolean trust(ProtectedTarget target, UUID playerUuid, String playerName, TrustLevel level) {
+         TargetKey key = new TargetKey(target.type(), target.signKey());
+-        entries.computeIfAbsent(key, ignored -> new LinkedHashMap<>())
+-            .put(playerUuid, new TrustEntry(playerUuid, playerName, level));
+-        save();
++        Map<UUID, TrustEntry> targetEntries = entries.computeIfAbsent(key, ignored -> new LinkedHashMap<>());
++        TrustEntry previous = targetEntries.put(playerUuid, new TrustEntry(playerUuid, playerName, level));
++        if (save()) return true;
++        if (previous == null) {
++            targetEntries.remove(playerUuid);
++            if (targetEntries.isEmpty()) entries.remove(key);
++        } else {
++            targetEntries.put(playerUuid, previous);
++        }
++        return false;
+     }
+@@ -122,12 +135,21 @@
+         Map<UUID, TrustEntry> targetEntries = entries.get(key);
+-        if (targetEntries == null || targetEntries.remove(playerUuid) == null) {
+-            return false;
+-        }
++        if (targetEntries == null) return false;
++        TrustEntry removed = targetEntries.remove(playerUuid);
++        if (removed == null) return false;
+         if (targetEntries.isEmpty()) {
+             entries.remove(key);
+         }
+-        save();
+-        return true;
++        if (save()) return true;
++        entries.computeIfAbsent(key, ignored -> new LinkedHashMap<>()).put(playerUuid, removed);
++        return false;
+@@ -140,5 +140,15 @@
+-    public void clear(ProtectionType type, BlockKey signKey) {
+-        if (entries.remove(new TargetKey(type, signKey)) != null) {
+-            save();
+-        }
++    public boolean clear(ProtectionType type, BlockKey signKey) {
++        TargetKey key = new TargetKey(type, signKey);
++        Map<UUID, TrustEntry> removed = entries.remove(key);
++        if (removed == null) return true;
++        if (save()) return true;
++        entries.put(key, removed);
++        return false;
+     }
