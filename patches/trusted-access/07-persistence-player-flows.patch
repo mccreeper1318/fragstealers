@@ -161,7 +161,7 @@
 +        inventory.setContents(markPickupContents(before, pickupToken));
          player.openInventory(inventory);
      }
-@@ -121,5 +137,87 @@
+@@ -121,5 +137,105 @@
      public boolean isPlaceholder(ItemStack item) {
          if (ItemUtil.isEmpty(item) || !item.hasItemMeta()) return false;
          Byte value = item.getItemMeta().getPersistentDataContainer().get(placeholderKey, PersistentDataType.BYTE);
@@ -183,6 +183,15 @@
 +        if (ItemUtil.isEmpty(item)) return null;
 +        ItemStack clean = item.clone();
 +        if (!isPickupItem(clean, token)) return clean;
++        ItemMeta meta = clean.getItemMeta();
++        meta.getPersistentDataContainer().remove(pickupItemKey);
++        clean.setItemMeta(meta);
++        return clean;
++    }
++
++    public ItemStack cleanPickupItem(ItemStack item) {
++        if (ItemUtil.isEmpty(item) || !isPickupItem(item)) return ItemUtil.isEmpty(item) ? null : item.clone();
++        ItemStack clean = item.clone();
 +        ItemMeta meta = clean.getItemMeta();
 +        meta.getPersistentDataContainer().remove(pickupItemKey);
 +        clean.setItemMeta(meta);
@@ -226,6 +235,21 @@
 +        if (isPickupItem(offhand, token)) player.getInventory().setItemInOffHand(cleanPickupItem(offhand, token));
 +    }
 +
++    public void clearStalePickupItems(Player player) {
++        ItemStack cursor = player.getItemOnCursor();
++        if (isPickupItem(cursor)) player.setItemOnCursor(cleanPickupItem(cursor));
++        ItemStack[] storage = player.getInventory().getStorageContents();
++        boolean changed = false;
++        for (int slot = 0; slot < storage.length; slot++) {
++            if (!isPickupItem(storage[slot])) continue;
++            storage[slot] = cleanPickupItem(storage[slot]);
++            changed = true;
++        }
++        if (changed) player.getInventory().setStorageContents(storage);
++        ItemStack offhand = player.getInventory().getItemInOffHand();
++        if (isPickupItem(offhand)) player.getInventory().setItemInOffHand(cleanPickupItem(offhand));
++    }
++
 +    private ItemStack[] markPickupContents(ItemStack[] contents, String token) {
 +        ItemStack[] marked = new ItemStack[contents.length];
 +        for (int slot = 0; slot < contents.length; slot++) {
@@ -256,7 +280,12 @@
 +    }
 +
      @EventHandler
-@@ -245,32 +255,43 @@
+@@ -139,3 +149,4 @@
+     @EventHandler
+     public void onJoin(PlayerJoinEvent event) {
++        menus.clearStalePickupItems(event.getPlayer());
+         if (!manager.ownerHasMail(event.getPlayer().getUniqueId())) return;
+@@ -245,32 +256,43 @@
      private void finishDeposit(Player player, Inventory inventory, MailboxMenuHolder holder) {
          menus.releaseDeposit(holder.signKey(), player.getUniqueId());
          MailboxData mailbox = manager.bySign(holder.signKey());
@@ -302,7 +331,7 @@
 +            }
          }
      }
-@@ -277,16 +298,59 @@
+@@ -277,16 +299,59 @@
          MailboxData mailbox = manager.bySign(holder.signKey());
          menus.releasePickup(holder.signKey(), player.getUniqueId());
 -        if (mailbox == null) return;
