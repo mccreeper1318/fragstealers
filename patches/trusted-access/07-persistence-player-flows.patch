@@ -21,58 +21,109 @@
          owner.sendMessage(plugin.success("Removed " + entry.playerName() + " from this protection's trust list."));
 --- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemUtil.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemUtil.java
-@@ -209,1 +209,5 @@
+@@ -209,1 +209,72 @@
 +    public static ItemStack[] copyContents(ItemStack[] contents) {
 +        return cloneContents(contents);
 +    }
 +
-     private static ItemStack[] cloneContents(ItemStack[] contents) {
---- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/mail/MailboxMenuService.java
-+++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/mail/MailboxMenuService.java
-@@ -34,3 +34,4 @@
-     private final NamespacedKey placeholderKey;
-     private final Map<BlockKey, UUID> activePickup = new HashMap<>();
-     private final Map<BlockKey, Set<UUID>> activeDeposits = new HashMap<>();
-+    private final Map<UUID, PickupSnapshot> pickupSnapshots = new HashMap<>();
-@@ -109,4 +110,6 @@
-         }
-         activePickup.put(mailbox.signKey(), player.getUniqueId());
-+        pickupSnapshots.put(player.getUniqueId(), new PickupSnapshot(
-+            ItemUtil.copyContents(player.getInventory().getContents()), cloneItem(player.getItemOnCursor())));
-         ItemStack[] before = mailbox.copyContents();
-@@ -138,6 +141,19 @@
-     public void releaseViewer(UUID viewer) {
-+        pickupSnapshots.remove(viewer);
-         activePickup.entrySet().removeIf(entry -> entry.getValue().equals(viewer));
-         activeDeposits.entrySet().removeIf(entry -> {
-             entry.getValue().remove(viewer);
-             return entry.getValue().isEmpty();
-         });
-     }
-+
-+    public void commitPickup(Player player) {
-+        pickupSnapshots.remove(player.getUniqueId());
-+    }
-+
-+    public void rollbackPickup(Player player) {
-+        PickupSnapshot snapshot = pickupSnapshots.remove(player.getUniqueId());
-+        if (snapshot == null) return;
-+        player.getInventory().setContents(ItemUtil.copyContents(snapshot.contents()));
-+        player.setItemOnCursor(snapshot.cursor() == null ? new ItemStack(Material.AIR) : snapshot.cursor().clone());
-+    }
-@@ -164,1 +180,10 @@
-+    private ItemStack cloneItem(ItemStack item) {
-+        return ItemUtil.isEmpty(item) ? null : item.clone();
-+    }
-+
-+    private record PickupSnapshot(ItemStack[] contents, ItemStack cursor) {
-+        private PickupSnapshot {
-+            contents = ItemUtil.copyContents(contents);
-+            cursor = ItemUtil.isEmpty(cursor) ? null : cursor.clone();
++    public static List<ItemStack> difference(ItemStack[] source, ItemStack[] subtract) {
++        ItemStack[] remaining = cloneContents(source);
++        List<ItemStack> subtracting = new ArrayList<>();
++        for (ItemStack item : subtract) {
++            if (!isEmpty(item)) subtracting.add(item.clone());
 +        }
++        removeMatching(remaining, subtracting);
++        List<ItemStack> result = new ArrayList<>();
++        for (ItemStack item : remaining) {
++            if (!isEmpty(item)) result.add(item.clone());
++        }
++        return result;
 +    }
 +
-     private ItemStack placeholder() {
++    public static List<ItemStack> removeMatching(ItemStack[] contents, List<ItemStack> items) {
++        List<ItemStack> missing = new ArrayList<>();
++        for (ItemStack requested : items) {
++            if (isEmpty(requested)) continue;
++            int remaining = requested.getAmount();
++            for (int slot = 0; slot < contents.length && remaining > 0; slot++) {
++                ItemStack current = contents[slot];
++                if (isEmpty(current) || !current.isSimilar(requested)) continue;
++                int taking = Math.min(remaining, current.getAmount());
++                int left = current.getAmount() - taking;
++                if (left <= 0) contents[slot] = null;
++                else {
++                    ItemStack clone = current.clone();
++                    clone.setAmount(left);
++                    contents[slot] = clone;
++                }
++                remaining -= taking;
++            }
++            if (remaining > 0) {
++                ItemStack clone = requested.clone();
++                clone.setAmount(remaining);
++                missing.add(clone);
++            }
++        }
++        return missing;
++    }
++
++    public static List<ItemStack> removeMatching(Player player, List<ItemStack> items) {
++        List<ItemStack> missing = new ArrayList<>();
++        PlayerInventory inventory = player.getInventory();
++        int storageSize = inventory.getStorageContents().length;
++        for (ItemStack requested : items) {
++            if (isEmpty(requested)) continue;
++            int remaining = requested.getAmount();
++            ItemStack cursor = player.getItemOnCursor();
++            if (!isEmpty(cursor) && cursor.isSimilar(requested)) {
++                int taking = Math.min(remaining, cursor.getAmount());
++                int left = cursor.getAmount() - taking;
++                if (left <= 0) player.setItemOnCursor(new ItemStack(Material.AIR));
++                else {
++                    ItemStack clone = cursor.clone();
++                    clone.setAmount(left);
++                    player.setItemOnCursor(clone);
++                }
++                remaining -= taking;
++            }
++            for (int slot = 0; slot < storageSize && remaining > 0; slot++) {
++                ItemStack current = inventory.getItem(slot);
++                if (isEmpty(current) || !current.isSimilar(requested)) continue;
++                int taking = Math.min(remaining, current.getAmount());
++                int left = current.getAmount() - taking;
++                if (left <= 0) inventory.setItem(slot, null);
++                else {
++                    ItemStack clone = current.clone();
++                    clone.setAmount(left);
++                    inventory.setItem(slot, clone);
++                }
++                remaining -= taking;
++            }
++            if (remaining > 0) {
++                ItemStack offhand = inventory.getItemInOffHand();
++                if (!isEmpty(offhand) && offhand.isSimilar(requested)) {
++                    int taking = Math.min(remaining, offhand.getAmount());
++                    int left = offhand.getAmount() - taking;
++                    inventory.setItemInOffHand(left <= 0 ? new ItemStack(Material.AIR) : withAmount(offhand, left));
++                    remaining -= taking;
++                }
++            }
++            if (remaining > 0) {
++                ItemStack clone = requested.clone();
++                clone.setAmount(remaining);
++                missing.add(clone);
++            }
++        }
++        return missing;
++    }
++
++    private static ItemStack withAmount(ItemStack item, int amount) {
++        ItemStack clone = item.clone();
++        clone.setAmount(amount);
++        return clone;
++    }
++
+     private static ItemStack[] cloneContents(ItemStack[] contents) {
 --- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/mail/MailboxListener.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/mail/MailboxListener.java
 @@ -245,32 +245,43 @@
@@ -121,13 +172,11 @@
 +            }
          }
      }
-@@ -278,15 +289,23 @@
+@@ -277,16 +288,40 @@
+         MailboxData mailbox = manager.bySign(holder.signKey());
          menus.releasePickup(holder.signKey(), player.getUniqueId());
--        if (mailbox == null) return;
-+        if (mailbox == null) {
-+            menus.commitPickup(player);
-+            return;
-+        }
+         if (mailbox == null) return;
++        ItemStack[] before = holder.before();
          ItemStack[] after = inventory.getContents();
          List<ItemStack> rejected = new ArrayList<>();
          for (int slot = 0; slot < after.length; slot++) {
@@ -138,14 +187,27 @@
              }
          }
 -        if (!rejected.isEmpty()) ItemUtil.giveOrDrop(player, rejected);
++        List<ItemStack> withdrawn = ItemUtil.difference(before, after);
++        List<ItemStack> inserted = ItemUtil.difference(after, before);
          mailbox.replaceContents(after);
 -        manager.save();
 +        if (!manager.save()) {
-+            mailbox.replaceContents(holder.before());
-+            menus.rollbackPickup(player);
-+            player.sendMessage(plugin.error("Could not save this mailbox change. Nothing was changed."));
++            mailbox.replaceContents(before);
++            List<ItemStack> unrecovered = ItemUtil.removeMatching(player, withdrawn);
++            List<ItemStack> returnItems = new ArrayList<>(inserted);
++            returnItems.addAll(rejected);
++            if (!returnItems.isEmpty()) ItemUtil.giveOrDrop(player, returnItems);
++            if (!unrecovered.isEmpty()) {
++                ItemStack[] adjustedRollback = ItemUtil.copyContents(before);
++                ItemUtil.removeMatching(adjustedRollback, unrecovered);
++                mailbox.replaceContents(adjustedRollback);
++                if (!manager.save()) {
++                    plugin.getLogger().severe("Mailbox pickup rollback could not persist an adjusted recovery state at "
++                        + mailbox.signKey().serialize() + "; unrecovered withdrawn items were not recreated in live state.");
++                }
++            }
++            player.sendMessage(plugin.error("Could not save this mailbox change. Only mailbox transfer items were rolled back."));
 +            return;
 +        }
-+        menus.commitPickup(player);
 +        if (!rejected.isEmpty()) ItemUtil.giveOrDrop(player, rejected);
          if (holder.adminOverride()) {
