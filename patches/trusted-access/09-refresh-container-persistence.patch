@@ -1,6 +1,6 @@
 --- fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/ShopManager.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/ShopManager.java
-@@ -150,23 +150,26 @@
+@@ -144,23 +144,26 @@
      public void refreshContainers(ShopData shop) {
 -        boolean changed = false;
 +        Set<BlockKey> added = new LinkedHashSet<>();
@@ -33,7 +33,7 @@
      }
 --- fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/MailboxManager.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/MailboxManager.java
-@@ -134,23 +134,26 @@
+@@ -132,23 +132,26 @@
      public void refreshContainers(MailboxData mailbox) {
 -        boolean changed = false;
 +        Set<BlockKey> added = new LinkedHashSet<>();
