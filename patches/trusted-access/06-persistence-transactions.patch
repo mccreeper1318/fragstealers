@@ -1,6 +1,6 @@
 --- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/data/ShopManager.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/ShopManager.java
-@@ -76,31 +76,48 @@
+@@ -76,31 +76,42 @@
 -    public void save() {
 +    public boolean save() {
          YamlConfiguration data = new YamlConfiguration();
@@ -44,12 +44,6 @@
          }
 -        save();
 +        return true;
-+    }
-+
-+    /** Best-effort compensation after another persistence step failed. */
-+    public boolean restore(ShopData shop) {
-+        register(shop);
-+        return save();
      }
 --- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/data/ShopManager.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/ShopManager.java
@@ -71,7 +65,31 @@
      private Material material(String value) {
 --- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/data/MailboxManager.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/MailboxManager.java
-@@ -78,34 +78,51 @@
+@@ -13,9 +13,10 @@
+ import java.io.File;
+ import java.util.ArrayList;
+ import java.util.HashMap;
++import java.util.HashSet;
+ import java.util.LinkedHashSet;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.Optional;
+ import java.util.Set;
+@@ -24,6 +25,7 @@
+     private final ContainerResolver resolver;
+     private final File dataFile;
+     private final Map<BlockKey, MailboxData> bySign = new HashMap<>();
+     private final Map<BlockKey, MailboxData> byContainer = new HashMap<>();
++    private final Set<BlockKey> persistenceBlocked = new HashSet<>();
+ 
+     public MailboxManager(FragStealers plugin, ContainerResolver resolver) {
+@@ -36,4 +38,5 @@
+     public void load() {
+         bySign.clear();
+         byContainer.clear();
++        persistenceBlocked.clear();
+         YamlConfiguration data = YamlConfiguration.loadConfiguration(dataFile);
+@@ -78,34 +81,45 @@
 -    public void save() {
 +    public boolean save() {
          YamlConfiguration data = new YamlConfiguration();
@@ -114,17 +132,46 @@
 +            return false;
          }
 -        save();
++        persistenceBlocked.remove(mailbox.signKey());
 +        return true;
+     }
++--- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/data/MailboxManager.java
+++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/MailboxManager.java
++@@ -147,3 +147,32 @@
++    public boolean ownerHasMail(UUID owner) {
++        return bySign.values().stream().anyMatch(mailbox -> mailbox.ownerUuid().equals(owner) && mailbox.hasMail());
 +    }
 +
-+    /** Best-effort compensation after another persistence step failed. */
-+    public boolean restore(MailboxData mailbox) {
-+        register(mailbox);
-+        return save();
-     }
++    public boolean isPersistenceBlocked(BlockKey signKey) {
++        return persistenceBlocked.contains(signKey);
++    }
++
++    public void quarantineUntilSaved(MailboxData mailbox) {
++        BlockKey signKey = mailbox.signKey();
++        if (!persistenceBlocked.add(signKey)) return;
++        plugin.getLogger().severe("Mailbox persistence recovery is pending at " + signKey.serialize()
++            + "; access is blocked until the recovery state can be saved.");
++        retryQuarantinedSave(signKey);
++    }
++
++    private void retryQuarantinedSave(BlockKey signKey) {
++        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
++            if (!persistenceBlocked.contains(signKey)) return;
++            if (!bySign.containsKey(signKey)) {
++                persistenceBlocked.remove(signKey);
++                return;
++            }
++            if (save()) {
++                persistenceBlocked.remove(signKey);
++                plugin.getLogger().warning("Mailbox persistence recovery completed at " + signKey.serialize() + ".");
++                return;
++            }
++            retryQuarantinedSave(signKey);
++        }, 100L);
++    }
 --- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/data/MailboxManager.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/MailboxManager.java
-@@ -170,4 +170,11 @@
+@@ -170,4 +199,11 @@
      private void register(MailboxData mailbox) {
          bySign.put(mailbox.signKey(), mailbox);
          for (BlockKey key : mailbox.containerKeys()) {
@@ -141,7 +188,7 @@
  }
 --- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/data/LockManager.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/LockManager.java
-@@ -157,4 +157,15 @@
+@@ -157,4 +157,10 @@
 -    public void remove(ChestLock lock) {
 +    public boolean remove(ChestLock lock) {
          unregister(lock);
@@ -151,12 +198,6 @@
 +            return false;
 +        }
 +        return true;
-+    }
-+
-+    /** Best-effort compensation after another persistence step failed. */
-+    public boolean restore(ChestLock lock) {
-+        register(lock);
-+        return save();
      }
 --- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/TrustManager.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/TrustManager.java
