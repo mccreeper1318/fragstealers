@@ -1,6 +1,6 @@
 --- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopMenuService.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopMenuService.java
-@@ -261,9 +261,20 @@
+@@ -259,9 +259,20 @@
 +        ItemStack[] stockBefore = ItemUtil.copyContents(stock.getContents());
 +        ItemStack[] playerBefore = ItemUtil.copyContents(player.getInventory().getStorageContents());
 +        long earningsBefore = shop.earnings();
@@ -21,7 +21,7 @@
 +            player.sendMessage(plugin.error("Could not save this purchase. Nothing was changed."));
 +            return;
 +        }
-@@ -290,4 +301,12 @@
+@@ -288,4 +299,12 @@
          long amount = Math.min(shop.earnings(), fit);
 +        ItemStack[] playerBefore = ItemUtil.copyContents(player.getInventory().getStorageContents());
          ItemUtil.giveOrDrop(player, shop.priceMaterial(), amount);
