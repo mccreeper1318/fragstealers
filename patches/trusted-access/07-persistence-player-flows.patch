@@ -172,7 +172,7 @@
 +            }
          }
      }
-@@ -278,15 +289,39 @@
+@@ -277,16 +288,40 @@
          MailboxData mailbox = manager.bySign(holder.signKey());
          menus.releasePickup(holder.signKey(), player.getUniqueId());
          if (mailbox == null) return;
