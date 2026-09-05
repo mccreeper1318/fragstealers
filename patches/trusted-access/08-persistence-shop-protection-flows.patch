@@ -35,7 +35,7 @@
 +        }
 --- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopListener.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopListener.java
-@@ -365,4 +365,16 @@
+@@ -364,4 +364,16 @@
 +        Material oldSellMaterial = shop.sellMaterial();
 +        int oldSellAmount = shop.sellAmount();
 +        Material oldPriceMaterial = shop.priceMaterial();
