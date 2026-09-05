@@ -161,7 +161,7 @@
 +        inventory.setContents(markPickupContents(before, pickupToken));
          player.openInventory(inventory);
      }
-@@ -121,5 +137,105 @@
+@@ -121,5 +137,126 @@
      public boolean isPlaceholder(ItemStack item) {
          if (ItemUtil.isEmpty(item) || !item.hasItemMeta()) return false;
          Byte value = item.getItemMeta().getPersistentDataContainer().get(placeholderKey, PersistentDataType.BYTE);
@@ -212,6 +212,13 @@
 +            storage[slot] = null;
 +        }
 +        player.getInventory().setStorageContents(storage);
++        ItemStack[] armor = player.getInventory().getArmorContents();
++        for (int slot = 0; slot < armor.length; slot++) {
++            if (!isPickupItem(armor[slot], token)) continue;
++            removed.add(cleanPickupItem(armor[slot], token));
++            armor[slot] = null;
++        }
++        player.getInventory().setArmorContents(armor);
 +        ItemStack offhand = player.getInventory().getItemInOffHand();
 +        if (isPickupItem(offhand, token)) {
 +            removed.add(cleanPickupItem(offhand, token));
@@ -231,6 +238,14 @@
 +            changed = true;
 +        }
 +        if (changed) player.getInventory().setStorageContents(storage);
++        ItemStack[] armor = player.getInventory().getArmorContents();
++        boolean armorChanged = false;
++        for (int slot = 0; slot < armor.length; slot++) {
++            if (!isPickupItem(armor[slot], token)) continue;
++            armor[slot] = cleanPickupItem(armor[slot], token);
++            armorChanged = true;
++        }
++        if (armorChanged) player.getInventory().setArmorContents(armor);
 +        ItemStack offhand = player.getInventory().getItemInOffHand();
 +        if (isPickupItem(offhand, token)) player.getInventory().setItemInOffHand(cleanPickupItem(offhand, token));
 +    }
@@ -246,6 +261,14 @@
 +            changed = true;
 +        }
 +        if (changed) player.getInventory().setStorageContents(storage);
++        ItemStack[] armor = player.getInventory().getArmorContents();
++        boolean armorChanged = false;
++        for (int slot = 0; slot < armor.length; slot++) {
++            if (!isPickupItem(armor[slot])) continue;
++            armor[slot] = cleanPickupItem(armor[slot]);
++            armorChanged = true;
++        }
++        if (armorChanged) player.getInventory().setArmorContents(armor);
 +        ItemStack offhand = player.getInventory().getItemInOffHand();
 +        if (isPickupItem(offhand)) player.getInventory().setItemInOffHand(cleanPickupItem(offhand));
 +    }
