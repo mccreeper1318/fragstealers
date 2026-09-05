@@ -52,7 +52,7 @@
          menus.updateSign(shop);
 --- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/ProtectionListener.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/ProtectionListener.java
-@@ -258,2 +258,15 @@
+@@ -258,2 +258,11 @@
 -            plugin.locks().remove(lockSign);
 -            plugin.trust().clear(ProtectionType.LOCK, lockSign.signKey());
 +            if (!plugin.locks().remove(lockSign)) {
@@ -61,14 +61,10 @@
 +                return;
 +            }
 +            if (!plugin.trust().clear(ProtectionType.LOCK, lockSign.signKey())) {
-+                if (!plugin.locks().restore(lockSign)) {
-+                    plugin.getLogger().severe("Could not restore lock after trust cleanup persistence failed at " + lockSign.signKey().serialize());
-+                }
-+                event.setCancelled(true);
-+                player.sendMessage(plugin.error("Could not save this removal. The protection was restored."));
-+                return;
++                plugin.getLogger().severe("Lock removed at " + lockSign.signKey().serialize()
++                    + " but stale trust cleanup could not be persisted. A replacement protection at this sign key will be blocked until cleanup succeeds.");
 +            }
-@@ -281,7 +294,20 @@
+@@ -281,7 +290,16 @@
              plugin.shopMenus().closeViewers(shopSign);
 -            if (shopSign.isConfigured() && payments > 0) {
 -                ItemUtil.giveOrDrop(player, shopSign.priceMaterial(), payments);
@@ -81,46 +77,63 @@
 -            plugin.shops().remove(shopSign);
 -            plugin.trust().clear(ProtectionType.SHOP, shopSign.signKey());
 +            if (!plugin.trust().clear(ProtectionType.SHOP, shopSign.signKey())) {
-+                if (!plugin.shops().restore(shopSign)) {
-+                    plugin.getLogger().severe("Could not restore shop after trust cleanup persistence failed at " + shopSign.signKey().serialize());
-+                }
-+                event.setCancelled(true);
-+                player.sendMessage(plugin.error("Could not save this removal. The shop was restored."));
-+                return;
++                plugin.getLogger().severe("Shop removed at " + shopSign.signKey().serialize()
++                    + " but stale trust cleanup could not be persisted. A replacement protection at this sign key will be blocked until cleanup succeeds.");
 +            }
 +            if (shopSign.isConfigured() && payments > 0) {
 +                ItemUtil.giveOrDrop(player, shopSign.priceMaterial(), payments);
 +                shopSign.removeEarnings(payments);
 +            }
-@@ -306,4 +332,17 @@
+@@ -306,4 +324,19 @@
 -            mailboxSign.clear();
 -            ItemUtil.giveOrDrop(player, mail);
 -            plugin.mailboxes().remove(mailboxSign);
 -            plugin.trust().clear(ProtectionType.MAILBOX, mailboxSign.signKey());
++            if (plugin.mailboxes().isPersistenceBlocked(mailboxSign.signKey())) {
++                event.setCancelled(true);
++                player.sendMessage(plugin.error("This mailbox is waiting for persistence recovery and cannot be removed yet."));
++                return;
++            }
 +            if (!plugin.mailboxes().remove(mailboxSign)) {
 +                event.setCancelled(true);
 +                player.sendMessage(plugin.error("Could not save this removal. The mailbox was left unchanged."));
 +                return;
 +            }
 +            if (!plugin.trust().clear(ProtectionType.MAILBOX, mailboxSign.signKey())) {
-+                if (!plugin.mailboxes().restore(mailboxSign)) {
-+                    plugin.getLogger().severe("Could not restore mailbox after trust cleanup persistence failed at " + mailboxSign.signKey().serialize());
-+                }
-+                event.setCancelled(true);
-+                player.sendMessage(plugin.error("Could not save this removal. The mailbox was restored."));
-+                return;
++                plugin.getLogger().severe("Mailbox removed at " + mailboxSign.signKey().serialize()
++                    + " but stale trust cleanup could not be persisted. A replacement protection at this sign key will be blocked until cleanup succeeds.");
 +            }
 +            mailboxSign.clear();
 +            ItemUtil.giveOrDrop(player, mail);
-@@ -457,1 +496,5 @@
+@@ -413,1 +446,7 @@
++        BlockKey lockSignKey = BlockKey.from(sign);
++        if (!plugin.trust().clear(ProtectionType.LOCK, lockSignKey)) {
++            event.setCancelled(true);
++            player.sendMessage(plugin.error("Could not clear stale trust for this location. Nothing was created."));
++            return;
++        }
+         if (!plugin.locks().create(containers, sign, ownerUuid, ownerName)) {
+@@ -456,2 +495,10 @@
+         ShopData shop = new ShopData(BlockKey.from(sign), keys, player.getUniqueId(), player.getName(), null, 0, null, 0, 0L);
 -        plugin.shops().add(shop);
++        if (!plugin.trust().clear(ProtectionType.SHOP, shop.signKey())) {
++            event.setCancelled(true);
++            player.sendMessage(plugin.error("Could not clear stale trust for this location. Nothing was created."));
++            return;
++        }
 +        if (!plugin.shops().add(shop)) {
 +            event.setCancelled(true);
 +            player.sendMessage(plugin.error("Could not save this shop. Nothing was created."));
 +            return;
 +        }
-@@ -505,1 +548,5 @@
+@@ -547,2 +594,10 @@
+         MailboxData mailbox = new MailboxData(BlockKey.from(sign), keys, ownerUuid, ownerName);
 -        plugin.mailboxes().add(mailbox);
++        if (!plugin.trust().clear(ProtectionType.MAILBOX, mailbox.signKey())) {
++            event.setCancelled(true);
++            player.sendMessage(plugin.error("Could not clear stale trust for this location. Nothing was created."));
++            return;
++        }
 +        if (!plugin.mailboxes().add(mailbox)) {
 +            event.setCancelled(true);
 +            player.sendMessage(plugin.error("Could not save this mailbox. Nothing was created."));
