@@ -199,6 +199,8 @@
 +    }
 +
 +    public List<ItemStack> removePickupItems(Player player, String token) {
++        // The token identifies the exact stacks that originated in this pickup session. Never substitute
++        // an unmarked isSimilar() stack from the player's unrelated inventory during rollback.
 +        List<ItemStack> removed = new java.util.ArrayList<>();
 +        ItemStack cursor = player.getItemOnCursor();
 +        if (isPickupItem(cursor, token)) {
