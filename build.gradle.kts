@@ -19,6 +19,10 @@ repositories {
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:26.2.build.117-stable")
+
+    testImplementation("io.papermc.paper:paper-api:26.2.build.117-stable")
+    testImplementation("org.junit.jupiter:junit-jupiter:6.1.3")
+    testImplementation("org.mockito:mockito-core:5.23.0")
 }
 
 java {
@@ -132,6 +136,10 @@ sourceSets.named("main") {
 
 tasks.named<JavaCompile>("compileJava") {
     dependsOn(preparePatchedSources)
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 tasks.processResources {
