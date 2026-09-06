@@ -3,6 +3,7 @@ package me.pinnacle.fragstealers.mail;
 import me.pinnacle.fragstealers.BlockKey;
 import me.pinnacle.fragstealers.ContainerResolver;
 import me.pinnacle.fragstealers.FragStealers;
+import me.pinnacle.fragstealers.MasterKeyManager;
 import me.pinnacle.fragstealers.data.MailboxData;
 import me.pinnacle.fragstealers.data.MailboxManager;
 import net.kyori.adventure.text.Component;
@@ -58,6 +59,7 @@ class MailboxPersistenceTransactionBehaviorTest {
     void setUp() throws Exception {
         plugin = mock(FragStealers.class);
         ContainerResolver resolver = mock(ContainerResolver.class);
+        MasterKeyManager masterKeys = mock(MasterKeyManager.class);
         menus = mock(MailboxMenuService.class);
         player = mock(Player.class);
         playerInventory = mock(PlayerInventory.class);
@@ -71,6 +73,7 @@ class MailboxPersistenceTransactionBehaviorTest {
         when(plugin.getDataFolder()).thenReturn(dataFolder.toFile());
         when(plugin.getLogger()).thenReturn(Logger.getLogger("MailboxPersistenceTransactionBehaviorTest"));
         when(plugin.getServer()).thenReturn(server);
+        when(plugin.masterKeys()).thenReturn(masterKeys);
         when(server.getScheduler()).thenReturn(scheduler);
         when(plugin.mailEnabled()).thenReturn(true);
         when(plugin.error(anyString())).thenReturn(Component.text("error"));
