@@ -75,7 +75,10 @@ class ShopPersistenceTransactionBehaviorTest {
         when(stock.getItem(0)).thenReturn(sold);
         when(playerInventory.getStorageContents()).thenReturn(playerContents);
 
-        menus.buy(player, shop);
+        try (MockedStatic<ItemCatalog> catalog = mockStatic(ItemCatalog.class, CALLS_REAL_METHODS)) {
+            catalog.when(() -> ItemCatalog.isSafePaymentMaterial(Material.EMERALD)).thenReturn(true);
+            menus.buy(player, shop);
+        }
 
         ArgumentCaptor<ItemStack[]> stockRestore = ArgumentCaptor.forClass(ItemStack[].class);
         verify(stock).setContents(stockRestore.capture());
@@ -95,7 +98,9 @@ class ShopPersistenceTransactionBehaviorTest {
         when(playerInventory.getStorageContents()).thenReturn(playerContents);
         when(manager.save()).thenReturn(false);
 
-        try (MockedStatic<ItemUtil> itemUtil = mockStatic(ItemUtil.class, CALLS_REAL_METHODS)) {
+        try (MockedStatic<ItemCatalog> catalog = mockStatic(ItemCatalog.class, CALLS_REAL_METHODS);
+             MockedStatic<ItemUtil> itemUtil = mockStatic(ItemUtil.class, CALLS_REAL_METHODS)) {
+            catalog.when(() -> ItemCatalog.isSafePaymentMaterial(Material.EMERALD)).thenReturn(true);
             itemUtil.when(() -> ItemUtil.fitAmount(playerInventory, Material.EMERALD, 7L)).thenReturn(7);
             itemUtil.when(() -> ItemUtil.giveOrDrop(player, Material.EMERALD, 7L)).thenAnswer(invocation -> null);
 
