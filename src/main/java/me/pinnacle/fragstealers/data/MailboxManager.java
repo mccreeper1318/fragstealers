@@ -113,7 +113,7 @@ public final class MailboxManager {
 
     public boolean isProtectedBlock(Block block) {
         BlockKey key = BlockKey.from(block);
-        return bySign.containsKey(key) || byContainer.containsKey(key);
+        return bySign.containsKey(key) || byContainer(block) != null;
     }
 
     public boolean inventoryBelongsToAny(Inventory inventory) {
