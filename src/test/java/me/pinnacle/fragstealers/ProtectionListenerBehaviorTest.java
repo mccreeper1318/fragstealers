@@ -6,6 +6,7 @@ import me.pinnacle.fragstealers.data.MailboxManager;
 import me.pinnacle.fragstealers.data.ShopManager;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Server;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
@@ -87,6 +88,7 @@ class ProtectionListenerBehaviorTest {
         Block sign = mock(Block.class);
         Block container = mock(Block.class);
         Inventory inventory = mock(Inventory.class);
+        World world = mock(World.class);
 
         when(event.getPlayer()).thenReturn(owner);
         when(event.getBlock()).thenReturn(sign);
@@ -103,6 +105,12 @@ class ProtectionListenerBehaviorTest {
         when(plugin.anyContainerProtected(container)).thenReturn(false);
         when(resolver.inventory(container)).thenReturn(inventory);
         when(inventory.getViewers()).thenReturn(List.of(staleViewer));
+        when(world.getName()).thenReturn("world");
+        when(sign.getWorld()).thenReturn(world);
+        when(sign.getX()).thenReturn(5);
+        when(sign.getY()).thenReturn(64);
+        when(sign.getZ()).thenReturn(5);
+        when(trust.clear(ProtectionType.LOCK, SIGN_KEY)).thenReturn(true);
         when(locks.create(any(), eq(sign), eq(OWNER), eq("Owner"))).thenReturn(true);
 
         listener.onSignChange(event);
