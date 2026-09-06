@@ -14,6 +14,7 @@ import org.bukkit.inventory.PlayerInventory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 
 import java.util.Set;
@@ -21,10 +22,12 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -68,6 +71,7 @@ class ShopPersistenceTransactionBehaviorTest {
         ItemStack[] stockContents = new ItemStack[] { sold };
         ItemStack[] playerContents = new ItemStack[] { payment, null };
 
+        when(payment.isSimilar(any(ItemStack.class))).thenReturn(true);
         when(manager.inventory(shop)).thenReturn(stock);
         when(manager.save()).thenReturn(false);
         when(stock.getContents()).thenReturn(stockContents);
@@ -75,7 +79,12 @@ class ShopPersistenceTransactionBehaviorTest {
         when(stock.getItem(0)).thenReturn(sold);
         when(playerInventory.getStorageContents()).thenReturn(playerContents);
 
-        try (MockedStatic<ItemCatalog> catalog = mockStatic(ItemCatalog.class, CALLS_REAL_METHODS)) {
+        try (MockedStatic<ItemCatalog> catalog = mockStatic(ItemCatalog.class);
+             MockedConstruction<ItemStack> construction = mockConstruction(ItemStack.class, (constructed, context) -> {
+                 when(constructed.getType()).thenReturn(Material.EMERALD);
+                 when(constructed.getAmount()).thenReturn(1);
+                 when(constructed.clone()).thenReturn(constructed);
+             })) {
             catalog.when(() -> ItemCatalog.isSafePaymentMaterial(Material.EMERALD)).thenReturn(true);
             menus.buy(player, shop);
         }
@@ -98,7 +107,7 @@ class ShopPersistenceTransactionBehaviorTest {
         when(playerInventory.getStorageContents()).thenReturn(playerContents);
         when(manager.save()).thenReturn(false);
 
-        try (MockedStatic<ItemCatalog> catalog = mockStatic(ItemCatalog.class, CALLS_REAL_METHODS);
+        try (MockedStatic<ItemCatalog> catalog = mockStatic(ItemCatalog.class);
              MockedStatic<ItemUtil> itemUtil = mockStatic(ItemUtil.class, CALLS_REAL_METHODS)) {
             catalog.when(() -> ItemCatalog.isSafePaymentMaterial(Material.EMERALD)).thenReturn(true);
             itemUtil.when(() -> ItemUtil.fitAmount(playerInventory, Material.EMERALD, 7L)).thenReturn(7);
