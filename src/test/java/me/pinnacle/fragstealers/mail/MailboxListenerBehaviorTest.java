@@ -15,6 +15,7 @@ import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.scheduler.BukkitTask;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,6 +58,7 @@ class MailboxListenerBehaviorTest {
         masterKeys = mock(MasterKeyManager.class);
         BukkitScheduler scheduler = mock(BukkitScheduler.class);
         Server server = mock(Server.class);
+        PlayerInventory playerInventory = mock(PlayerInventory.class);
         player = mock(Player.class);
         mailbox = new MailboxData(SIGN, Set.of(CONTAINER), OWNER, "Owner");
 
@@ -66,6 +68,8 @@ class MailboxListenerBehaviorTest {
         when(plugin.error(anyString())).thenReturn(Component.text("error"));
         when(plugin.success(anyString())).thenReturn(Component.text("success"));
         when(player.getUniqueId()).thenReturn(TRUSTED);
+        when(player.getInventory()).thenReturn(playerInventory);
+        when(playerInventory.addItem(any(ItemStack.class))).thenReturn(new java.util.HashMap<>());
         when(manager.bySign(SIGN)).thenReturn(mailbox);
         doAnswer(invocation -> {
             Runnable task = invocation.getArgument(1);
