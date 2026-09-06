@@ -1,9 +1,0 @@
---- fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemCatalog.java
-+++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemCatalog.java
-@@ -4,1 +4,0 @@
--import org.bukkit.inventory.ItemStack;
-@@ -107,3 +106,3 @@
-     public static int maxStackSize(Material material) {
--        return Math.max(1, new ItemStack(material, 1).getMaxStackSize());
-+        return Math.max(1, material.getMaxStackSize());
-     }
