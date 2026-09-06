@@ -5,6 +5,17 @@
 -        return item == null || item.getType().isAir() || item.getAmount() <= 0;
 +        return item == null || item.getType() == Material.AIR || item.getType() == Material.CAVE_AIR || item.getType() == Material.VOID_AIR || item.getAmount() <= 0;
      }
+--- fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/MailboxData.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/data/MailboxData.java
+@@ -39,3 +39,3 @@
+-        items[slot] = item == null || item.getType().isAir() || item.getAmount() <= 0 ? null : item.clone();
++        items[slot] = item == null || item.getType() == org.bukkit.Material.AIR || item.getType() == org.bukkit.Material.CAVE_AIR || item.getType() == org.bukkit.Material.VOID_AIR || item.getAmount() <= 0 ? null : item.clone();
+@@ -56,3 +56,3 @@
+-            if (items[i] != null && !items[i].getType().isAir() && items[i].getAmount() > 0) {
++            if (items[i] != null && items[i].getType() != org.bukkit.Material.AIR && items[i].getType() != org.bukkit.Material.CAVE_AIR && items[i].getType() != org.bukkit.Material.VOID_AIR && items[i].getAmount() > 0) {
+@@ -65,3 +65,3 @@
+-            if (items[i] == null || items[i].getType().isAir()) {
++            if (items[i] == null || items[i].getType() == org.bukkit.Material.AIR || items[i].getType() == org.bukkit.Material.CAVE_AIR || items[i].getType() == org.bukkit.Material.VOID_AIR) {
 --- fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemCatalog.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemCatalog.java
 @@ -67,3 +67,3 @@
