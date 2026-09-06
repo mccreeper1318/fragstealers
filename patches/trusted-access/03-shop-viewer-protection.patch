@@ -1,6 +1,6 @@
 --- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/ProtectionListener.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/ProtectionListener.java
-@@ -107,8 +107,15 @@
+@@ -107,8 +107,13 @@
          switch (tag) {
              case "fs" -> createLock(event, player, signBlock, containers, inventory);
              case "fs shop" -> createShop(event, player, signBlock, containers);
@@ -8,10 +8,7 @@
              default -> {
              }
          }
-+        boolean protectedInventoryCreated =
-+            (tag.equals("fs shop") && plugin.shops().bySign(signBlock) != null)
-+                || (tag.equals("fs mail") && plugin.mailboxes().bySign(signBlock) != null);
-+        if (protectedInventoryCreated) {
++        if ((tag.equals("fs shop") && plugin.shops().bySign(signBlock) != null) || (tag.equals("fs mail") && plugin.mailboxes().bySign(signBlock) != null)) {
 +            for (var viewer : new ArrayList<>(inventory.getViewers())) {
 +                viewer.closeInventory();
 +            }
