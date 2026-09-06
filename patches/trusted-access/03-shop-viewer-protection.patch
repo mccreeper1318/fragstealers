@@ -8,7 +8,7 @@
              default -> {
              }
          }
-+        if (tag.equals("fs shop") && plugin.shops().bySign(signBlock) != null) {
++        if ((tag.equals("fs shop") && plugin.shops().bySign(signBlock) != null) || (tag.equals("fs mail") && plugin.mailboxes().bySign(signBlock) != null)) {
 +            for (var viewer : new ArrayList<>(inventory.getViewers())) {
 +                viewer.closeInventory();
 +            }
