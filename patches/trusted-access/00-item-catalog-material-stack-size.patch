@@ -1,3 +1,10 @@
+--- fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemUtil.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemUtil.java
+@@ -19,3 +19,3 @@
+     public static boolean isEmpty(ItemStack item) {
+-        return item == null || item.getType().isAir() || item.getAmount() <= 0;
++        return item == null || item.getType() == Material.AIR || item.getType() == Material.CAVE_AIR || item.getType() == Material.VOID_AIR || item.getAmount() <= 0;
+     }
 --- fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemCatalog.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemCatalog.java
 @@ -67,3 +67,3 @@
