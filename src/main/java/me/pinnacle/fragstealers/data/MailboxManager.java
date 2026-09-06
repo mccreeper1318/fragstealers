@@ -108,7 +108,7 @@ public final class MailboxManager {
 
     public MailboxData bySign(Block block) { return bySign.get(BlockKey.from(block)); }
     public MailboxData bySign(BlockKey key) { return bySign.get(key); }
-    public MailboxData byContainer(Block block) { return byContainer.get(BlockKey.from(block)); }
+    public MailboxData byContainer(Block block) { MailboxData direct = byContainer.get(BlockKey.from(block)); return direct != null ? direct : resolver.connectedBlocks(block).stream().map(connected -> byContainer.get(BlockKey.from(connected))).filter(mailbox -> mailbox != null).findFirst().orElse(null); }
     public MailboxData byContainer(BlockKey key) { return byContainer.get(key); }
 
     public boolean isProtectedBlock(Block block) {
