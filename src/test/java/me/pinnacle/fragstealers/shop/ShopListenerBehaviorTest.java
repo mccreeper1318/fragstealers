@@ -65,6 +65,7 @@ class ShopListenerBehaviorTest {
         when(plugin.error(anyString())).thenReturn(Component.text("error"));
         when(player.getUniqueId()).thenReturn(TRUSTED);
         when(manager.bySign(SIGN)).thenReturn(shop);
+        when(manager.byInventory(stock)).thenReturn(shop);
         when(manager.inventory(shop)).thenReturn(stock);
         when(manager.inventoryBelongs(stock, shop)).thenReturn(true);
         when(stock.getContents()).thenReturn(new ItemStack[27]);
@@ -85,11 +86,11 @@ class ShopListenerBehaviorTest {
         when(plugin.canRestockShop(player, shop)).thenReturn(true);
         openStockSession();
 
-        InventoryClickEvent remove = stockClick(0, InventoryAction.PICKUP_ALL, new ItemStack(Material.DIAMOND));
+        InventoryClickEvent remove = stockClick(0, InventoryAction.PICKUP_ALL, item(Material.DIAMOND));
         listener.onInventoryClick(remove);
         verify(remove).setCancelled(true);
 
-        InventoryClickEvent add = stockClick(30, InventoryAction.MOVE_TO_OTHER_INVENTORY, new ItemStack(Material.DIAMOND));
+        InventoryClickEvent add = stockClick(30, InventoryAction.MOVE_TO_OTHER_INVENTORY, item(Material.DIAMOND));
         listener.onInventoryClick(add);
         verify(add, never()).setCancelled(true);
     }
@@ -100,11 +101,11 @@ class ShopListenerBehaviorTest {
         when(plugin.canRestockShop(player, shop)).thenReturn(true);
         openStockSession();
 
-        InventoryClickEvent invalid = stockClick(30, InventoryAction.MOVE_TO_OTHER_INVENTORY, new ItemStack(Material.DIRT));
+        InventoryClickEvent invalid = stockClick(30, InventoryAction.MOVE_TO_OTHER_INVENTORY, item(Material.DIRT));
         listener.onInventoryClick(invalid);
         verify(invalid).setCancelled(true);
 
-        ItemStack masterKey = mock(ItemStack.class);
+        ItemStack masterKey = item(Material.WOODEN_AXE);
         when(masterKeys.isMasterKey(masterKey)).thenReturn(true);
         InventoryClickEvent master = stockClick(30, InventoryAction.MOVE_TO_OTHER_INVENTORY, masterKey);
         listener.onInventoryClick(master);
@@ -117,7 +118,7 @@ class ShopListenerBehaviorTest {
         when(plugin.canRestockShop(player, shop)).thenReturn(true);
         openStockSession();
 
-        InventoryClickEvent remove = stockClick(0, InventoryAction.PICKUP_ALL, new ItemStack(Material.DIAMOND));
+        InventoryClickEvent remove = stockClick(0, InventoryAction.PICKUP_ALL, item(Material.DIAMOND));
         listener.onInventoryClick(remove);
 
         verify(remove, never()).setCancelled(true);
@@ -129,7 +130,7 @@ class ShopListenerBehaviorTest {
         when(plugin.canRestockShop(player, shop)).thenReturn(true);
         openStockSession();
 
-        InventoryClickEvent remove = stockClick(0, InventoryAction.PICKUP_ALL, new ItemStack(Material.DIAMOND));
+        InventoryClickEvent remove = stockClick(0, InventoryAction.PICKUP_ALL, item(Material.DIAMOND));
         listener.onInventoryClick(remove);
 
         verify(remove).setCancelled(true);
@@ -163,5 +164,12 @@ class ShopListenerBehaviorTest {
         when(event.getAction()).thenReturn(action);
         when(event.getCurrentItem()).thenReturn(current);
         return event;
+    }
+
+    private ItemStack item(Material material) {
+        ItemStack item = mock(ItemStack.class);
+        when(item.getType()).thenReturn(material);
+        when(item.getAmount()).thenReturn(1);
+        return item;
     }
 }
