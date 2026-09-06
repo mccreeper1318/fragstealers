@@ -6,10 +6,12 @@ import me.pinnacle.fragstealers.MasterKeyManager;
 import me.pinnacle.fragstealers.data.MailboxData;
 import me.pinnacle.fragstealers.data.MailboxManager;
 import net.kyori.adventure.text.Component;
+import org.bukkit.Material;
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
@@ -18,9 +20,12 @@ import org.bukkit.scheduler.BukkitTask;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -59,6 +64,7 @@ class MailboxListenerBehaviorTest {
         when(plugin.getServer()).thenReturn(server);
         when(server.getScheduler()).thenReturn(scheduler);
         when(plugin.error(anyString())).thenReturn(Component.text("error"));
+        when(plugin.success(anyString())).thenReturn(Component.text("success"));
         when(player.getUniqueId()).thenReturn(TRUSTED);
         when(manager.bySign(SIGN)).thenReturn(mailbox);
         doAnswer(invocation -> {
@@ -120,6 +126,50 @@ class MailboxListenerBehaviorTest {
         verify(event).setCancelled(true);
     }
 
+    @Test
+    void failedDepositPersistenceRestoresMailboxContents() {
+        when(plugin.mailEnabled()).thenReturn(true);
+        when(manager.save()).thenReturn(false);
+        ItemStack submitted = item(Material.DIAMOND);
+        MailboxMenuHolder holder = new MailboxMenuHolder(SIGN, MailboxMenuType.DEPOSIT, new boolean[27], null, false);
+        Inventory inventory = mock(Inventory.class);
+        InventoryCloseEvent event = mock(InventoryCloseEvent.class);
+        when(inventory.getHolder()).thenReturn(holder);
+        when(inventory.getSize()).thenReturn(27);
+        when(inventory.getItem(0)).thenReturn(submitted);
+        when(event.getPlayer()).thenReturn(player);
+        when(event.getInventory()).thenReturn(inventory);
+
+        listener.onInventoryClose(event);
+
+        assertNull(mailbox.getItem(0));
+        verify(manager).save();
+        verify(menus, never()).notifyOwner(mailbox);
+    }
+
+    @Test
+    void failedPickupPersistenceRestoresMailboxAfterRecoveringSessionItems() {
+        ItemStack mail = item(Material.DIAMOND);
+        when(mail.isSimilar(mail)).thenReturn(true);
+        mailbox.setItem(0, mail);
+        ItemStack[] before = mailbox.copyContents();
+        MailboxMenuHolder holder = new MailboxMenuHolder(SIGN, MailboxMenuType.PICKUP, null, before, false, false, "pickup-token");
+        Inventory inventory = mock(Inventory.class);
+        InventoryCloseEvent event = mock(InventoryCloseEvent.class);
+        when(inventory.getHolder()).thenReturn(holder);
+        when(inventory.getContents()).thenReturn(new ItemStack[27]);
+        when(event.getPlayer()).thenReturn(player);
+        when(event.getInventory()).thenReturn(inventory);
+        when(manager.save()).thenReturn(false);
+        when(menus.removePickupItems(player, "pickup-token")).thenReturn(List.of(mail));
+
+        listener.onInventoryClose(event);
+
+        assertSame(mail, mailbox.getItem(0));
+        verify(manager).save();
+        verify(menus).removePickupItems(player, "pickup-token");
+    }
+
     private MailboxMenuHolder pickupHolder(boolean readOnly) {
         return new MailboxMenuHolder(SIGN, MailboxMenuType.PICKUP, null, new ItemStack[27], false, readOnly);
     }
@@ -136,5 +186,13 @@ class MailboxListenerBehaviorTest {
         when(event.getRawSlot()).thenReturn(rawSlot);
         when(event.getAction()).thenReturn(action);
         return event;
+    }
+
+    private ItemStack item(Material material) {
+        ItemStack item = mock(ItemStack.class);
+        when(item.getType()).thenReturn(material);
+        when(item.getAmount()).thenReturn(1);
+        when(item.clone()).thenReturn(item);
+        return item;
     }
 }
