@@ -2,6 +2,7 @@ package me.pinnacle.fragstealers;
 
 import me.pinnacle.fragstealers.data.ChestLock;
 import me.pinnacle.fragstealers.data.LockManager;
+import me.pinnacle.fragstealers.data.MailboxData;
 import me.pinnacle.fragstealers.data.MailboxManager;
 import me.pinnacle.fragstealers.data.ShopManager;
 import net.kyori.adventure.text.Component;
@@ -29,6 +30,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -119,6 +121,16 @@ class ProtectionListenerBehaviorTest {
     }
 
     @Test
+    void creatingMailboxClosesPlayersWhoAlreadyHadSingleContainerOpen() {
+        assertCreatingMailboxClosesExistingViewers(false);
+    }
+
+    @Test
+    void creatingMailboxClosesPlayersWhoAlreadyHadDoubleChestOpen() {
+        assertCreatingMailboxClosesExistingViewers(true);
+    }
+
+    @Test
     void revokingTrustWhileLockIsOpenCancelsTheNextInventoryActionAndClosesTheView() {
         Player player = mock(Player.class);
         Block container = mock(Block.class);
@@ -177,6 +189,60 @@ class ProtectionListenerBehaviorTest {
 
         verify(click).setCancelled(true);
         verify(player).closeInventory();
+    }
+
+    private void assertCreatingMailboxClosesExistingViewers(boolean doubleChest) {
+        Player owner = mock(Player.class);
+        HumanEntity staleViewer = mock(HumanEntity.class);
+        SignChangeEvent event = mock(SignChangeEvent.class);
+        Block sign = mock(Block.class);
+        Block primary = mock(Block.class);
+        Block secondary = doubleChest ? mock(Block.class) : null;
+        Inventory inventory = mock(Inventory.class);
+        World world = mock(World.class);
+        MailboxData registeredMailbox = mock(MailboxData.class);
+
+        Set<Block> containers = doubleChest ? Set.of(primary, secondary) : Set.of(primary);
+
+        when(event.getPlayer()).thenReturn(owner);
+        when(event.getBlock()).thenReturn(sign);
+        when(event.line(0)).thenReturn(Component.text("[fs mail]"));
+        when(event.line(1)).thenReturn(Component.empty());
+        when(owner.getUniqueId()).thenReturn(OWNER);
+        when(owner.getName()).thenReturn("Owner");
+        when(owner.hasPermission("fragstealers.mail.create")).thenReturn(true);
+        when(plugin.mailEnabled()).thenReturn(true);
+        when(locks.bySign(sign)).thenReturn(Optional.empty());
+        when(shops.bySign(sign)).thenReturn(null);
+        when(mailboxes.bySign(sign)).thenReturn(null, registeredMailbox);
+        when(resolver.findAttachedContainer(sign)).thenReturn(Optional.of(primary));
+        when(resolver.connectedBlocks(primary)).thenReturn(containers);
+        when(plugin.anyContainerProtected(any(Block.class))).thenReturn(false);
+        when(resolver.inventory(primary)).thenReturn(inventory);
+        when(resolver.isEmpty(inventory)).thenReturn(true);
+        when(inventory.getViewers()).thenReturn(List.of(staleViewer));
+        when(world.getName()).thenReturn("world");
+        when(sign.getWorld()).thenReturn(world);
+        when(sign.getX()).thenReturn(5);
+        when(sign.getY()).thenReturn(64);
+        when(sign.getZ()).thenReturn(5);
+        when(primary.getWorld()).thenReturn(world);
+        when(primary.getX()).thenReturn(5);
+        when(primary.getY()).thenReturn(64);
+        when(primary.getZ()).thenReturn(6);
+        if (secondary != null) {
+            when(secondary.getWorld()).thenReturn(world);
+            when(secondary.getX()).thenReturn(6);
+            when(secondary.getY()).thenReturn(64);
+            when(secondary.getZ()).thenReturn(6);
+        }
+        when(trust.clear(ProtectionType.MAILBOX, SIGN_KEY)).thenReturn(true);
+        when(mailboxes.add(any(MailboxData.class))).thenReturn(true);
+        doReturn(mock(BukkitTask.class)).when(scheduler).runTask(eq(plugin), any(Runnable.class));
+
+        listener.onSignChange(event);
+
+        verify(staleViewer).closeInventory();
     }
 
     private ChestLock lock() {
