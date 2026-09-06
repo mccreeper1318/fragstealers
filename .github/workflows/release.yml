@@ -60,13 +60,14 @@ jobs:
             VERSION="${VERSION#v}"
           fi
 
-          # Stable examples: 26.2-6
-          # Prerelease examples: 26.2-6-beta.1, 26.2-6-rc.2
-          if [[ "$VERSION" =~ ^([0-9]+\.[0-9]+-[0-9]+)(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$ ]]; then
+          # Current stable example: 26.2-1.1.5
+          # Current prerelease examples: 26.2-1.1.5-beta.1, 26.2-1.1.5-rc.2
+          # Legacy update-number tags such as 26.2-6 remain accepted for historical rebuilds.
+          if [[ "$VERSION" =~ ^([0-9]+\.[0-9]+-([0-9]+|[0-9]+\.[0-9]+\.[0-9]+))(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$ ]]; then
             BASE_VERSION="${BASH_REMATCH[1]}"
           else
             echo "Invalid FragStealers release tag: $RAW_TAG"
-            echo "Expected a tag such as 26.2-6, 26.2-6-beta.1, v26.2-6, or v26.2-6-beta.1."
+            echo "Expected a tag such as 26.2-1.1.5, 26.2-1.1.5-beta.1, v26.2-1.1.5, or v26.2-1.1.5-beta.1."
             exit 1
           fi
 
