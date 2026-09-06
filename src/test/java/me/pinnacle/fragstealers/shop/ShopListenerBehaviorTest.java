@@ -183,6 +183,21 @@ class ShopListenerBehaviorTest {
         verify(player, never()).closeInventory();
     }
 
+    @Test
+    void masterKeyRemovalWithoutIndependentTrustCancelsAndClosesStockView() {
+        when(plugin.canManageShop(player, shop)).thenReturn(true, false);
+        when(plugin.canRestockShop(player, shop)).thenReturn(true, false);
+        when(plugin.isMasterOverride(player, OWNER)).thenReturn(true);
+        when(masterKeys.canUse(player)).thenReturn(false);
+        openStockSession();
+
+        InventoryClickEvent action = stockClick(30, InventoryAction.MOVE_TO_OTHER_INVENTORY, item(Material.DIAMOND));
+        listener.onInventoryClick(action);
+
+        verify(action).setCancelled(true);
+        verify(player).closeInventory();
+    }
+
     private void openStockSession() {
         Inventory menu = mock(Inventory.class);
         InventoryView view = mock(InventoryView.class);
