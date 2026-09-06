@@ -11,6 +11,7 @@ import org.bukkit.Server;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
@@ -137,6 +138,51 @@ class ShopListenerBehaviorTest {
         verify(player).closeInventory();
     }
 
+    @Test
+    void masterKeyRemovalFallsBackToAccessTrustAndBlocksStockRemovalWithoutClosing() {
+        when(plugin.canManageShop(player, shop)).thenReturn(true, false);
+        when(plugin.canRestockShop(player, shop)).thenReturn(true);
+        when(plugin.isMasterOverride(player, OWNER)).thenReturn(true);
+        when(masterKeys.canUse(player)).thenReturn(false);
+        openStockSession();
+
+        InventoryClickEvent remove = stockClick(0, InventoryAction.PICKUP_ALL, item(Material.DIAMOND));
+        listener.onInventoryClick(remove);
+
+        verify(remove).setCancelled(true);
+        verify(player, never()).closeInventory();
+    }
+
+    @Test
+    void masterKeyRemovalFallsBackToAccessTrustForValidStockDrag() {
+        when(plugin.canManageShop(player, shop)).thenReturn(true, false);
+        when(plugin.canRestockShop(player, shop)).thenReturn(true);
+        when(plugin.isMasterOverride(player, OWNER)).thenReturn(true);
+        when(masterKeys.canUse(player)).thenReturn(false);
+        openStockSession();
+
+        InventoryDragEvent drag = stockDrag(Set.of(0), item(Material.DIAMOND));
+        listener.onInventoryDrag(drag);
+
+        verify(drag, never()).setCancelled(true);
+        verify(player, never()).closeInventory();
+    }
+
+    @Test
+    void masterKeyRemovalKeepsFullStockAccessWithIndependentManageTrust() {
+        when(plugin.canManageShop(player, shop)).thenReturn(true);
+        when(plugin.canRestockShop(player, shop)).thenReturn(true);
+        when(plugin.isMasterOverride(player, OWNER)).thenReturn(true);
+        when(masterKeys.canUse(player)).thenReturn(false);
+        openStockSession();
+
+        InventoryClickEvent remove = stockClick(0, InventoryAction.PICKUP_ALL, item(Material.DIAMOND));
+        listener.onInventoryClick(remove);
+
+        verify(remove, never()).setCancelled(true);
+        verify(player, never()).closeInventory();
+    }
+
     private void openStockSession() {
         Inventory menu = mock(Inventory.class);
         InventoryView view = mock(InventoryView.class);
@@ -163,6 +209,17 @@ class ShopListenerBehaviorTest {
         when(event.getRawSlot()).thenReturn(rawSlot);
         when(event.getAction()).thenReturn(action);
         when(event.getCurrentItem()).thenReturn(current);
+        return event;
+    }
+
+    private InventoryDragEvent stockDrag(Set<Integer> rawSlots, ItemStack oldCursor) {
+        InventoryView view = mock(InventoryView.class);
+        InventoryDragEvent event = mock(InventoryDragEvent.class);
+        when(event.getWhoClicked()).thenReturn(player);
+        when(event.getView()).thenReturn(view);
+        when(view.getTopInventory()).thenReturn(stock);
+        when(event.getRawSlots()).thenReturn(rawSlots);
+        when(event.getOldCursor()).thenReturn(oldCursor);
         return event;
     }
 
