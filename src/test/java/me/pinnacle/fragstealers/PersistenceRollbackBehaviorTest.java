@@ -1,5 +1,6 @@
 package me.pinnacle.fragstealers;
 
+import me.pinnacle.fragstealers.data.AuditLogManager;
 import me.pinnacle.fragstealers.data.LockManager;
 import me.pinnacle.fragstealers.data.MailboxData;
 import me.pinnacle.fragstealers.data.MailboxManager;
@@ -8,6 +9,7 @@ import me.pinnacle.fragstealers.data.ShopManager;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.World;
+import org.bukkit.entity.Player;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -20,6 +22,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Logger;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
@@ -86,6 +89,18 @@ class PersistenceRollbackBehaviorTest {
 
         assertFalse(manager.trust(target, TRUSTED, "Trusted", TrustLevel.ACCESS));
         assertFalse(manager.has(ProtectionType.LOCK, SIGN, TRUSTED, TrustLevel.ACCESS));
+    }
+
+    @Test
+    void failedAuditWriteIsContainedAndDoesNotCreateAnAuditFile() {
+        AuditLogManager audit = new AuditLogManager(plugin);
+        Player administrator = mock(Player.class);
+        when(administrator.getUniqueId()).thenReturn(TRUSTED);
+        when(administrator.getName()).thenReturn("Administrator");
+
+        assertDoesNotThrow(() -> audit.log(administrator, "TEST_ACTION", ProtectionType.LOCK,
+            OWNER, "Owner", SIGN, "forced persistence failure"));
+        assertFalse(new File(plugin.getDataFolder(), "audit-log.yml").exists());
     }
 
     private Block block(String worldName, int x, int y, int z) {
