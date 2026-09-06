@@ -19,6 +19,11 @@ repositories {
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:26.2.build.117-stable")
+
+    testImplementation("io.papermc.paper:paper-api:26.2.build.117-stable")
+    testImplementation("org.junit.jupiter:junit-jupiter:6.1.3")
+    testImplementation("org.mockito:mockito-core:5.23.0")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.3")
 }
 
 java {
@@ -132,6 +137,16 @@ sourceSets.named("main") {
 
 tasks.named<JavaCompile>("compileJava") {
     dependsOn(preparePatchedSources)
+}
+
+tasks.test {
+    useJUnitPlatform()
+    testLogging {
+        events("failed")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        showStackTraces = true
+        showCauses = true
+    }
 }
 
 tasks.processResources {

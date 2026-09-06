@@ -1,0 +1,31 @@
+--- fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemCatalog.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemCatalog.java
+@@ -30,6 +30,8 @@
+-    private static final List<Material> ITEMS = build();
+-    private static final Map<Group, List<Material>> ITEMS_BY_GROUP = buildGroups();
+-    private static final Map<Category, List<Group>> GROUPS_BY_CATEGORY = buildCategories();
+-    private static final List<Category> CATEGORIES = List.of(Category.values()).stream()
+-        .filter(category -> !groups(category).isEmpty())
+-        .toList();
++    private static final class CatalogData {
++        private static final List<Material> ITEMS = build();
++        private static final Map<Group, List<Material>> ITEMS_BY_GROUP = buildGroups();
++        private static final Map<Category, List<Group>> GROUPS_BY_CATEGORY = buildCategories();
++        private static final List<Category> CATEGORIES = List.of(Category.values()).stream()
++            .filter(category -> !groups(category).isEmpty()).toList();
++    }
+@@ -41,1 +43,1 @@
+-        return CATEGORIES;
++        return CatalogData.CATEGORIES;
+@@ -45,1 +47,1 @@
+-        return CATEGORIES.stream().filter(category -> paymentItemCount(category) > 0).toList();
++        return CatalogData.CATEGORIES.stream().filter(category -> paymentItemCount(category) > 0).toList();
+@@ -52,1 +54,1 @@
+-        return GROUPS_BY_CATEGORY.getOrDefault(category, List.of());
++        return CatalogData.GROUPS_BY_CATEGORY.getOrDefault(category, List.of());
+@@ -63,1 +65,1 @@
+-        return ITEMS_BY_GROUP.getOrDefault(group, List.of());
++        return CatalogData.ITEMS_BY_GROUP.getOrDefault(group, List.of());
+@@ -149,1 +151,1 @@
+-        for (Material material : ITEMS) {
++        for (Material material : CatalogData.ITEMS) {
