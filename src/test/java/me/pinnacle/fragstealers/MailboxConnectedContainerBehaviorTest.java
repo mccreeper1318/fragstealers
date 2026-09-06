@@ -4,6 +4,7 @@ import me.pinnacle.fragstealers.data.MailboxData;
 import me.pinnacle.fragstealers.data.MailboxManager;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.inventory.Inventory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -13,11 +14,14 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Predicate;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -52,6 +56,31 @@ class MailboxConnectedContainerBehaviorTest {
         assertSame(mailbox, manager.byContainer(newHalf));
         assertTrue(manager.isProtectedBlock(newHalf));
         assertFalse(mappings.containsKey(NEW_HALF_KEY));
+    }
+
+    @Test
+    void physicalDoubleChestInventoryBelongsWhenResolvedThroughEitherHalf() throws Exception {
+        FragStealers plugin = mock(FragStealers.class);
+        ContainerResolver resolver = mock(ContainerResolver.class);
+        when(plugin.getDataFolder()).thenReturn(tempDir.toFile());
+        MailboxManager manager = new MailboxManager(plugin, resolver);
+
+        Block existing = block(EXISTING_KEY);
+        Block newHalf = block(NEW_HALF_KEY);
+        Inventory inventory = mock(Inventory.class);
+        MailboxData mailbox = new MailboxData(SIGN_KEY, Set.of(EXISTING_KEY), OWNER, "Owner");
+        containerMappings(manager).put(EXISTING_KEY, mailbox);
+
+        LinkedHashSet<Block> connected = new LinkedHashSet<>();
+        connected.add(newHalf);
+        connected.add(existing);
+        when(resolver.connectedBlocks(newHalf)).thenReturn(connected);
+        when(resolver.inventoryTouches(eq(inventory), any())).thenAnswer(invocation -> {
+            Predicate<Block> predicate = invocation.getArgument(1);
+            return predicate.test(newHalf);
+        });
+
+        assertTrue(manager.inventoryBelongsToAny(inventory));
     }
 
     @Test
