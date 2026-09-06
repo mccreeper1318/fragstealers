@@ -1,0 +1,45 @@
+--- fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopListener.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopListener.java
+@@ -473,6 +473,22 @@
+     private boolean stockAuthorized(Player player, ShopData shop, StockSession session) {
+-        if (session.adminOverride() && plugin.masterKeys().canUse(player)) return true;
++        if (session.adminOverride()) {
++            if (plugin.masterKeys().canUse(player)) {
++                session.mode(StockMode.FULL);
++                return true;
++            }
++            if (plugin.canManageShop(player, shop)) {
++                session.mode(StockMode.FULL);
++                return true;
++            }
++            if (plugin.canRestockShop(player, shop)) {
++                session.mode(StockMode.RESTOCK_ONLY);
++                return true;
++            }
++            return false;
++        }
+         return session.mode() == StockMode.FULL
+             ? plugin.canManageShop(player, shop)
+             : plugin.canRestockShop(player, shop);
+     }
+@@ -556,3 +572,18 @@
+-    private record StockSession(BlockKey signKey, StockMode mode, boolean adminOverride, ItemStack[] before) {
++    private static final class StockSession {
++        private final BlockKey signKey;
++        private StockMode mode;
++        private final boolean adminOverride;
++        private final ItemStack[] before;
++
++        private StockSession(BlockKey signKey, StockMode mode, boolean adminOverride, ItemStack[] before) {
++            this.signKey = signKey;
++            this.mode = mode;
++            this.adminOverride = adminOverride;
++            this.before = before;
++        }
++
++        private BlockKey signKey() { return signKey; }
++        private StockMode mode() { return mode; }
++        private void mode(StockMode mode) { this.mode = mode; }
++        private boolean adminOverride() { return adminOverride; }
++        private ItemStack[] before() { return before; }
+     }
