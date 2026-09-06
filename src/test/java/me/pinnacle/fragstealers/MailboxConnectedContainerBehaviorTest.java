@@ -17,6 +17,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -49,6 +50,7 @@ class MailboxConnectedContainerBehaviorTest {
 
         assertSame(mailbox, manager.byContainer(existing));
         assertSame(mailbox, manager.byContainer(newHalf));
+        assertTrue(manager.isProtectedBlock(newHalf));
         assertFalse(mappings.containsKey(NEW_HALF_KEY));
     }
 
@@ -63,6 +65,7 @@ class MailboxConnectedContainerBehaviorTest {
         when(resolver.connectedBlocks(unrelated)).thenReturn(Set.of(unrelated));
 
         assertNull(manager.byContainer(unrelated));
+        assertFalse(manager.isProtectedBlock(unrelated));
     }
 
     @SuppressWarnings("unchecked")
