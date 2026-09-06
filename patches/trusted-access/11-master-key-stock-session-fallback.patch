@@ -1,6 +1,6 @@
 --- fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopListener.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopListener.java
-@@ -473,6 +473,22 @@
+@@ -460,6 +460,22 @@
      private boolean stockAuthorized(Player player, ShopData shop, StockSession session) {
 -        if (session.adminOverride() && plugin.masterKeys().canUse(player)) return true;
 +        if (session.adminOverride()) {
@@ -22,7 +22,7 @@
              ? plugin.canManageShop(player, shop)
              : plugin.canRestockShop(player, shop);
      }
-@@ -556,3 +572,18 @@
+@@ -543,3 +559,18 @@
 -    private record StockSession(BlockKey signKey, StockMode mode, boolean adminOverride, ItemStack[] before) {
 +    private static final class StockSession {
 +        private final BlockKey signKey;
