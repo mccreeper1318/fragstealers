@@ -7,6 +7,7 @@ on:
     branches:
       - main
       - "agent/**"
+      - "dev/**"
   pull_request:
   workflow_dispatch:
 
@@ -65,12 +66,12 @@ jobs:
           if [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF" == refs/heads/agent/* ]]; then
             COMMIT_MESSAGE="$(git log -1 --pretty=%B)"
 
-            if [[ "$COMMIT_MESSAGE" =~ \[prerelease[[:space:]]+([0-9]+\.[0-9]+-[0-9]+-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)\] ]]; then
+            if [[ "$COMMIT_MESSAGE" =~ \[prerelease[[:space:]]+([0-9]+\.[0-9]+-([0-9]+|[0-9]+\.[0-9]+\.[0-9]+)-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)\] ]]; then
               RELEASE_TAG="${BASH_REMATCH[1]}"
               BUILD_VERSION="$RELEASE_TAG"
               PUBLISH_PRERELEASE=true
 
-              if [[ "$RELEASE_TAG" =~ ^([0-9]+\.[0-9]+-[0-9]+)-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*$ ]]; then
+              if [[ "$RELEASE_TAG" =~ ^([0-9]+\.[0-9]+-([0-9]+|[0-9]+\.[0-9]+\.[0-9]+))-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*$ ]]; then
                 BASE_VERSION="${BASH_REMATCH[1]}"
               else
                 echo "Invalid prerelease marker version: $RELEASE_TAG"

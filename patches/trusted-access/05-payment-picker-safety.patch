@@ -1,0 +1,180 @@
+--- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemCatalog.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemCatalog.java
+@@ -22,2 +22,9 @@
+     ));
++    private static final Set<String> UNSAFE_PAYMENT = Set.of(
++        "ENCHANTED_BOOK", "WRITTEN_BOOK", "FILLED_MAP", "TIPPED_ARROW", "SUSPICIOUS_STEW", "GOAT_HORN",
++        "OMINOUS_BOTTLE"
++    );
++    private static final Set<String> SAFE_BUCKET_PAYMENT = Set.of(
++        "BUCKET", "WATER_BUCKET", "LAVA_BUCKET", "MILK_BUCKET", "POWDER_SNOW_BUCKET"
++    );
+     private static final List<Material> ITEMS = build();
+@@ -33,3 +38,7 @@
+     public static List<Category> categories() {
+         return CATEGORIES;
+     }
++
++    public static List<Category> paymentCategories() {
++        return CATEGORIES.stream().filter(category -> paymentItemCount(category) > 0).toList();
++    }
+@@ -37,6 +46,11 @@
+     public static List<Group> groups(Category category) {
+         if (category == null) {
+             return List.of();
+         }
+         return GROUPS_BY_CATEGORY.getOrDefault(category, List.of());
+     }
++
++    public static List<Group> paymentGroups(Category category) {
++        return groups(category).stream().filter(group -> !paymentItems(group).isEmpty()).toList();
++    }
+@@ -44,6 +58,11 @@
+     public static List<Material> items(Group group) {
+         if (group == null) {
+             return List.of();
+         }
+         return ITEMS_BY_GROUP.getOrDefault(group, List.of());
+     }
++
++    public static List<Material> paymentItems(Group group) {
++        return items(group).stream().filter(ItemCatalog::isSafePaymentMaterial).toList();
++    }
+@@ -51,7 +70,15 @@
+     public static int itemCount(Category category) {
+         int count = 0;
+         for (Group group : groups(category)) {
+             count += items(group).size();
+         }
+         return count;
+     }
++
++    public static int paymentItemCount(Category category) {
++        int count = 0;
++        for (Group group : paymentGroups(category)) {
++            count += paymentItems(group).size();
++        }
++        return count;
++    }
+@@ -59,7 +86,18 @@
+     public static boolean isAllowed(Material material) {
+         if (material == null || !material.isItem() || material.isAir()) {
+             return false;
+         }
+         String name = material.name();
+         return !BLOCKED.contains(name) && !name.startsWith("LEGACY_");
+     }
++
++    public static boolean isSafePaymentMaterial(Material material) {
++        if (!isAllowed(material)) return false;
++        String name = material.name();
++        if (UNSAFE_PAYMENT.contains(name)) return false;
++        if (name.endsWith("POTION")) return false;
++        if (name.startsWith("FIREWORK_")) return false;
++        // Entity buckets can carry variant/entity state. New bucketed entities are unsafe by default
++        // until explicitly reviewed, while ordinary fluid/milk/powder-snow buckets remain valid.
++        return !name.endsWith("_BUCKET") || SAFE_BUCKET_PAYMENT.contains(name);
++    }
+--- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopMenuService.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopMenuService.java
+@@ -107,7 +107,9 @@
+-        List<ItemCatalog.Category> categories = ItemCatalog.categories();
++        boolean payment = type == ShopMenuType.SELECT_PRICE_CATEGORY;
++        List<ItemCatalog.Category> categories = payment ? ItemCatalog.paymentCategories() : ItemCatalog.categories();
+         for (int slot = 0; slot < categories.size() && slot < PAGE_SIZE; slot++) {
+             ItemCatalog.Category category = categories.get(slot);
+             inventory.setItem(slot, namedItem(category.icon(), category.displayName(), NamedTextColor.YELLOW,
+-                List.of(Component.text(ItemCatalog.itemCount(category) + " items", NamedTextColor.GRAY),
++                List.of(Component.text((payment ? ItemCatalog.paymentItemCount(category) : ItemCatalog.itemCount(category)) + " items", NamedTextColor.GRAY),
+                     Component.text("Click to browse subcategories.", NamedTextColor.DARK_GRAY))));
+@@ -129,7 +131,9 @@
+-        List<ItemCatalog.Group> groups = ItemCatalog.groups(category);
++        boolean payment = type == ShopMenuType.SELECT_PRICE_GROUP;
++        List<ItemCatalog.Group> groups = payment ? ItemCatalog.paymentGroups(category) : ItemCatalog.groups(category);
+         for (int slot = 0; slot < groups.size() && slot < PAGE_SIZE; slot++) {
+             ItemCatalog.Group group = groups.get(slot);
+             inventory.setItem(slot, namedItem(group.icon(), group.displayName(), NamedTextColor.YELLOW,
+-                List.of(Component.text(ItemCatalog.items(group).size() + " items", NamedTextColor.GRAY),
++                List.of(Component.text((payment ? ItemCatalog.paymentItems(group).size() : ItemCatalog.items(group).size()) + " items", NamedTextColor.GRAY),
+                     Component.text("Click to view items.", NamedTextColor.DARK_GRAY))));
+@@ -142,1 +146,2 @@
+-        List<Material> items = ItemCatalog.items(group);
++        boolean payment = type == ShopMenuType.SELECT_PRICE_ITEM;
++        List<Material> items = payment ? ItemCatalog.paymentItems(group) : ItemCatalog.items(group);
+@@ -227,7 +232,12 @@
+         Inventory stock = manager.inventory(shop);
+         if (stock == null || !shop.isConfigured()) {
+             player.closeInventory();
+             player.sendMessage(plugin.error("This shop is unavailable."));
+             return;
+         }
++        if (!ItemCatalog.isSafePaymentMaterial(shop.priceMaterial())) {
++            player.sendMessage(plugin.error("This shop uses a payment material that can no longer be represented safely. "
++                + "The owner must recreate the shop with a supported payment material."));
++            return;
++        }
+         java.util.function.Predicate<ItemStack> usableStock = item -> !plugin.masterKeys().isMasterKey(item);
+@@ -264,6 +274,11 @@
+     public void collectPayments(Player player, ShopData shop) {
+         if (!shop.isConfigured() || shop.earnings() <= 0) {
+             player.sendMessage(plugin.error("This shop has no payments to collect."));
+             openMain(player, shop);
+             return;
+         }
++        if (!ItemCatalog.isSafePaymentMaterial(shop.priceMaterial())) {
++            player.sendMessage(plugin.error("This legacy shop has stored payments in an unsupported currency. "
++                + "They cannot be reconstructed safely; contact a server administrator to resolve the stored balance."));
++            return;
++        }
+         int fit = ItemUtil.fitAmount(player.getInventory(), shop.priceMaterial(), shop.earnings());
+--- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopListener.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopListener.java
+@@ -204,4 +204,5 @@
+-        List<ItemCatalog.Category> categories = ItemCatalog.categories();
++        List<ItemCatalog.Category> categories = holder.type() == ShopMenuType.SELECT_PRICE_CATEGORY
++            ? ItemCatalog.paymentCategories() : ItemCatalog.categories();
+         if (slot >= categories.size()) return;
+         ItemCatalog.Category category = categories.get(slot);
+@@ -226,4 +227,5 @@
+-        List<ItemCatalog.Group> groups = ItemCatalog.groups(holder.category());
++        List<ItemCatalog.Group> groups = holder.type() == ShopMenuType.SELECT_PRICE_GROUP
++            ? ItemCatalog.paymentGroups(holder.category()) : ItemCatalog.groups(holder.category());
+         if (slot >= groups.size()) return;
+         ItemCatalog.Group group = groups.get(slot);
+@@ -258,6 +260,8 @@
+-        List<Material> items = ItemCatalog.items(group);
++        List<Material> items = holder.type() == ShopMenuType.SELECT_PRICE_ITEM
++            ? ItemCatalog.paymentItems(group) : ItemCatalog.items(group);
+         int index = holder.page() * ShopMenuService.PAGE_SIZE + slot;
+         if (index < 0 || index >= items.size()) return;
+         Material selected = items.get(index);
+         if (!ItemCatalog.isAllowed(selected)) return;
++        if (holder.type() == ShopMenuType.SELECT_PRICE_ITEM && !ItemCatalog.isSafePaymentMaterial(selected)) return;
+         SetupSession session = session(player, shop.signKey());
+@@ -342,5 +346,11 @@
+         if (session == null || !session.complete()) {
+             player.sendMessage(plugin.error("Shop setup was incomplete."));
+             return;
+         }
++        if (!ItemCatalog.isSafePaymentMaterial(session.priceMaterial)) {
++            player.sendMessage(plugin.error("That material cannot be stored safely as shop payment. Choose a different payment item."));
++            later(() -> menus.openCategoryPicker(player, shop.signKey(), ShopMenuType.SELECT_PRICE_CATEGORY));
++            return;
++        }
+         Inventory stock = manager.inventory(shop);
+--- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/ProtectionListener.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/ProtectionListener.java
+@@ -7,1 +7,2 @@
++import me.pinnacle.fragstealers.shop.ItemCatalog;
+ import me.pinnacle.fragstealers.shop.ItemUtil;
+@@ -273,3 +274,9 @@
+-            plugin.shopMenus().closeViewers(shopSign);
+             long payments = shopSign.earnings();
++            if (shopSign.isConfigured() && payments > 0 && !ItemCatalog.isSafePaymentMaterial(shopSign.priceMaterial())) {
++                event.setCancelled(true);
++                player.sendMessage(plugin.error("This legacy shop has stored payments in an unsupported currency and cannot be removed automatically. "
++                    + "Contact a server administrator to resolve the stored balance safely."));
++                return;
++            }
++            plugin.shopMenus().closeViewers(shopSign);
+             if (shopSign.isConfigured() && payments > 0) {

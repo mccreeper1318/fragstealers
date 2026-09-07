@@ -1,4 +1,4 @@
-# FragStealers 26.2-6
+# FragStealers 26.2-1.1.5
 
 FragStealers is a Paper plugin for protecting player storage, operating secure container shops, sending items through virtual mailboxes, sharing controlled access with trusted players, and giving administrators a logged recovery tool.
 
@@ -10,7 +10,7 @@ FragStealers is a Paper plugin for protecting player storage, operating secure c
 ## Installation
 
 1. Stop the server.
-2. Place `FragStealers-26.2-6.jar` in the server's `plugins` folder.
+2. Place `FragStealers-26.2-1.1.5.jar` in the server's `plugins` folder.
 3. Start the server.
 4. Review `plugins/FragStealers/config.yml`.
 
@@ -25,7 +25,7 @@ FragStealers supports:
 - Double chests
 - Barrels
 
-A container must be empty before it can become a lock, shop, or mailbox. A container cannot be registered as more than one FragStealers type.
+Ordinary `[fs]` locks can protect containers that already hold items. Shops and mailboxes must still be empty when they are created. A container cannot be registered as more than one FragStealers type.
 
 ## Ordinary storage locks
 
@@ -45,6 +45,19 @@ PlayerName
 The owner can open the container and remove the protection sign. Trusted players can open the container according to the trust system. Authorized Master Key holders can open the container and remove its sign for administrative recovery.
 
 The protected container cannot be broken until its protection sign is removed.
+
+When a new lock is created, existing viewers of the backing inventory are closed so they must pass the new authorization rules before interacting again. Active protected inventory sessions also recheck authorization so revoked trust or loss of Master Key authorization cannot leave a stale authorized view open.
+
+### Creating a lock for another player
+
+An administrator with `fragstealers.masterkey.use` can hold a genuine Master Key in either hand and create a storage lock for a known player:
+
+```text
+Line 1: [fs]
+Line 2: PlayerName
+```
+
+The container can already contain items. Ownership is stored under the target player's UUID as though that player created the lock, and the delegated action is recorded in `audit-log.yml`.
 
 ### Hopper settings
 
@@ -69,7 +82,7 @@ Protection owners can grant access to individual players while looking directly 
 /fs trusted
 ```
 
-The target player must already be known to the server. Trust is stored by UUID in `trusted-players.yml`, so name changes do not transfer access to another account.
+The target player must already be known to the server. FragStealers checks the server's player history rather than requiring the player to be currently cached or online. Trust is stored by UUID in `trusted-players.yml`, so name changes do not transfer access to another account.
 
 ### Access levels
 
@@ -88,6 +101,8 @@ Trusted players cannot:
 
 Only the protection owner can change trusted players. Master Key administrators cannot change another player's trust list. Removing a protection automatically deletes its trust entries.
 
+Authorization is checked while protected inventories are in use rather than only when they are opened. Revoking or reducing trust therefore takes effect on the active session. A shop stock session that was opened with a Master Key also falls back to the player's independent trust after the key is removed: `manage` keeps full stock access, `access` becomes restock-only, and a player with neither permission is closed out.
+
 ## Player shops
 
 To create a shop:
@@ -101,18 +116,36 @@ To create a shop:
 
 Shop stock remains in the physical container. Collected payments are stored in `shops.yml` until the owner, a manage-level trusted player, or an authorized Master Key holder collects them.
 
-### Item selection and search
+The physical shop inventory is protected independently from the sign/menu path. Existing viewers are closed or revalidated when a container becomes a shop, and unexpected physical stock interactions without a valid stock session fail closed. Connected double-chest stock is resolved as part of the protected shop so an attached half cannot provide a temporary unrestricted path while container mappings refresh.
 
-The item selector includes an anvil search field. It supports partial friendly names and Minecraft-style names, including:
+### Item selection
 
-```text
-diamond
-oak log
-oak_log
-ingot
-```
+Shop setup uses organized inventory menus instead of text or anvil search. Choose a main category, then a subcategory, then the exact item. Large subcategories use Previous and Next page controls, and Back buttons return to the previous level without cancelling setup.
 
-Leaving the search blank shows the full item catalog.
+Main categories are:
+
+- Building Blocks
+- Wood & Natural
+- Ores & Minerals
+- Redstone
+- Farming & Food
+- Mob Drops
+- Tools & Equipment
+- Decoration
+- Brewing & Enchanting
+- Transportation
+- Nether
+- End
+- Storage & Utility
+- Miscellaneous
+
+All materials allowed by the shop catalog remain reachable through these categories and subcategories.
+
+### Payments
+
+Payment selection is restricted to safe catalog materials. Master Keys and internal or otherwise unsafe items are excluded from valid shop payment choices.
+
+When a purchase succeeds, FragStealers preserves the exact withdrawn payment item stacks, including their item metadata, when storing payments for later collection. Payment storage and related shop mutations are persisted transactionally so a failed YAML write does not leave only part of the transaction applied.
 
 ### Shop signs
 
@@ -168,6 +201,10 @@ The mailbox is stored under the target player's UUID as though that player creat
 
 Access-level trusted players can collect mail but cannot insert or rearrange items through pickup mode. Manage-level trusted players receive full mailbox-content controls.
 
+Mailbox backing containers are not a supported direct interface. Direct physical open attempts are cancelled, and unexpected physical click/drag views fail closed. Existing backing-container viewers are closed when a mailbox is created, and a newly attached double-chest half is immediately treated as part of the protected mailbox instead of waiting for a deferred refresh.
+
+If mailbox pickup persistence fails, recovery is limited to items associated with that pickup transaction rather than restoring an old snapshot of the player's entire inventory. This prevents unrelated inventory changes from being overwritten; stale pickup recovery markers are also cleaned up when the player joins again.
+
 ### Disabling mailboxes
 
 ```yaml
@@ -190,7 +227,7 @@ Requirements:
 - Giving keys requires `fragstealers.masterkey.give`.
 - Using keys requires `fragstealers.masterkey.use`.
 - The key normally must remain in the main hand while accessing or managing another player's protection.
-- Delegated mailbox creation accepts the key in either hand so the sign can be placed normally.
+- Delegated lock and mailbox creation accept the key in either hand so the sign can be placed normally.
 
 A Master Key cannot directly break a protected container. The administrator must remove the protection sign first.
 
@@ -217,7 +254,7 @@ A Master Key cannot directly break a protected container. The administrator must
 | `fragstealers.masterkey.use` | `op` | Use Master Key administrative access |
 | `fragstealers.admin.reload` | `op` | Reload the plugin configuration |
 
-## Data files
+## Data files and persistence
 
 FragStealers stores its data in:
 
@@ -233,10 +270,13 @@ plugins/FragStealers/
 
 Do not edit data files while the server is running. FragStealers uses atomic YAML writes to reduce the risk of partial or corrupted saves.
 
+Player-facing protection, trust, shop, and mailbox mutations that require persistence are guarded so failed durable writes can roll back the associated in-memory or inventory change instead of silently leaving memory and disk out of sync. Container-refresh persistence also restores the prior mapping when a save fails.
+
 ## Administrative audit log
 
 `audit-log.yml` records administrative actions performed through Master Key access, including:
 
+- Creating a storage lock for another player
 - Creating a mailbox for another player
 - Removing another player's protection sign
 - Withdrawing items from another player's protected lock
@@ -244,3 +284,17 @@ Do not edit data files while the server is running. FragStealers uses atomic YAM
 - Withdrawing items from another player's mailbox
 
 Audit entries older than 30 days are purged automatically.
+
+## Build, test, and release verification
+
+FragStealers 26.2-1.1.5 is built with Java 25 against `paper-api:26.2.build.117-stable`.
+
+The Gradle build runs automated behavioral regression tests for protection and inventory authorization as well as persistence-failure recovery. GitHub Actions validates pull requests and pushes to `main`, `agent/**`, and `dev/**`, with manual build dispatch also supported.
+
+Automatic prerelease publishing remains restricted to the authorized `agent/**` commit-marker flow. The workflows understand the current semantic plugin suffix format, including versions such as `26.2-1.1.5-beta.1` and `26.2-1.1.5-rc.1`, while older 26.2 update-number tags remain accepted for historical rebuilds.
+
+Release packaging verifies the expected JAR filename, required `plugin.yml` and `config.yml` resources, and the embedded plugin version before upload. Release builds also generate a SHA-256 checksum. The stable artifact name for this release is:
+
+```text
+FragStealers-26.2-1.1.5.jar
+```

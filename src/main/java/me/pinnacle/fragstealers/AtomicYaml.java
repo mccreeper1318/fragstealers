@@ -14,11 +14,11 @@ public final class AtomicYaml {
     private AtomicYaml() {
     }
 
-    public static void save(JavaPlugin plugin, YamlConfiguration configuration, File target) {
+    public static boolean save(JavaPlugin plugin, YamlConfiguration configuration, File target) {
         File parent = target.getParentFile();
         if (parent != null && !parent.exists() && !parent.mkdirs()) {
             plugin.getLogger().severe("Could not create data folder for " + target.getName());
-            return;
+            return false;
         }
 
         File temporary = new File(target.getParentFile(), target.getName() + ".tmp");
@@ -29,11 +29,13 @@ public final class AtomicYaml {
             } catch (AtomicMoveNotSupportedException ex) {
                 Files.move(temporary.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING);
             }
+            return true;
         } catch (IOException ex) {
             plugin.getLogger().log(Level.SEVERE, "Could not safely save " + target.getName(), ex);
             if (temporary.exists() && !temporary.delete()) {
                 plugin.getLogger().warning("Could not remove temporary file " + temporary.getName());
             }
+            return false;
         }
     }
 }

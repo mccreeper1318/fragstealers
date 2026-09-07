@@ -10,17 +10,14 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
 import org.bukkit.block.sign.Side;
 import org.bukkit.block.sign.SignSide;
 import org.bukkit.entity.Player;
-import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,32 +28,33 @@ public final class ShopMenuService {
     public static final int BUY_SLOT = 11;
     public static final int CLOSE_SLOT = 15;
     public static final int SETUP_SLOT = 13;
-    public static final int PREVIOUS_PAGE_SLOT = 45;
+    public static final int BACK_SLOT = 45;
+    public static final int PREVIOUS_PAGE_SLOT = 47;
     public static final int CANCEL_SETUP_SLOT = 49;
-    public static final int SEARCH_SLOT = 50;
-    public static final int NEXT_PAGE_SLOT = 53;
+    public static final int NEXT_PAGE_SLOT = 51;
     public static final int CONFIRM_DONE_SLOT = 11;
+    public static final int CONFIRM_BACK_SLOT = 13;
     public static final int CONFIRM_CANCEL_SLOT = 15;
     public static final int PAGE_SIZE = 45;
 
     private final FragStealers plugin;
     private final ShopManager manager;
-    private final NamespacedKey searchQueryKey;
 
     public ShopMenuService(FragStealers plugin, ShopManager manager) {
         this.plugin = plugin;
         this.manager = manager;
-        this.searchQueryKey = new NamespacedKey(plugin, "shop_search_query");
     }
 
     public void openMain(Player player, ShopData shop) {
-        boolean manage = plugin.canManage(player, shop.ownerUuid());
-        ShopMenuHolder holder = new ShopMenuHolder(shop.signKey(), ShopMenuType.MAIN, manage && !shop.isOwner(player.getUniqueId()));
+        boolean manage = plugin.canManageShop(player, shop);
+        boolean restock = plugin.canRestockShop(player, shop);
+        ShopMenuHolder holder = new ShopMenuHolder(shop.signKey(), ShopMenuType.MAIN,
+            plugin.isMasterOverride(player, shop.ownerUuid()));
         Inventory inventory = Bukkit.createInventory(holder, 27, Component.text("FragStealers Shop"));
         holder.inventory(inventory);
         fill(inventory, Material.GRAY_STAINED_GLASS_PANE);
 
-        if (!plugin.shopsEnabled() && !manage) {
+        if (!plugin.shopsEnabled() && !restock) {
             inventory.setItem(13, namedItem(Material.BARRIER, "Shops Temporarily Disabled", NamedTextColor.RED,
                 List.of(Component.text("Purchases are disabled by the server.", NamedTextColor.GRAY))));
             player.openInventory(inventory);
@@ -83,6 +81,10 @@ public final class ShopMenuService {
                 List.of(Component.text("Stock only: " + ItemCatalog.display(shop.sellMaterial()), NamedTextColor.GRAY))));
             inventory.setItem(OWNER_COLLECT_SLOT, namedItem(Material.GOLD_INGOT, "Collect Payments", NamedTextColor.RED,
                 List.of(Component.text("Stored: " + shop.earnings() + " " + ItemCatalog.display(shop.priceMaterial()), NamedTextColor.GRAY))));
+        } else if (restock) {
+            inventory.setItem(OWNER_STOCK_SLOT, namedItem(Material.CHEST, "Restock Shop", NamedTextColor.GREEN,
+                List.of(Component.text("You may add " + ItemCatalog.display(shop.sellMaterial()) + " but cannot remove stock.", NamedTextColor.GRAY))));
+            inventory.setItem(CLOSE_SLOT, namedItem(Material.RED_STAINED_GLASS_PANE, "Close", NamedTextColor.RED, List.of()));
         } else {
             inventory.setItem(BUY_SLOT, namedItem(Material.LIME_STAINED_GLASS_PANE, "Buy Item", NamedTextColor.GREEN,
                 List.of(
@@ -94,16 +96,56 @@ public final class ShopMenuService {
         player.openInventory(inventory);
     }
 
-    public void openItemPicker(Player player, BlockKey signKey, ShopMenuType type, int page, String query) {
-        List<Material> items = ItemCatalog.shopItems(query);
+    public void openCategoryPicker(Player player, BlockKey signKey, ShopMenuType type) {
+        ShopData shop = manager.bySign(signKey);
+        ShopMenuHolder holder = new ShopMenuHolder(signKey, type, 0, null, null, isAdminOverride(player, shop));
+        Inventory inventory = Bukkit.createInventory(holder, 54, Component.text(selectionTitle(type, "Category")));
+        holder.inventory(inventory);
+        fill(inventory, Material.GRAY_STAINED_GLASS_PANE);
+
+        List<ItemCatalog.Category> categories = ItemCatalog.categories();
+        for (int slot = 0; slot < categories.size() && slot < PAGE_SIZE; slot++) {
+            ItemCatalog.Category category = categories.get(slot);
+            inventory.setItem(slot, namedItem(category.icon(), category.displayName(), NamedTextColor.YELLOW,
+                List.of(Component.text(ItemCatalog.itemCount(category) + " items", NamedTextColor.GRAY),
+                    Component.text("Click to browse subcategories.", NamedTextColor.DARK_GRAY))));
+        }
+        if (type == ShopMenuType.SELECT_PRICE_CATEGORY) {
+            inventory.setItem(BACK_SLOT, namedItem(Material.ARROW, "Back to Sell Quantity", NamedTextColor.YELLOW,
+                List.of(Component.text("Return without restarting setup.", NamedTextColor.GRAY))));
+        }
+        inventory.setItem(CANCEL_SETUP_SLOT, namedItem(Material.RED_STAINED_GLASS_PANE, "Cancel Setup", NamedTextColor.RED, List.of()));
+        player.openInventory(inventory);
+    }
+
+    public void openGroupPicker(Player player, BlockKey signKey, ShopMenuType type, ItemCatalog.Category category) {
+        ShopData shop = manager.bySign(signKey);
+        ShopMenuHolder holder = new ShopMenuHolder(signKey, type, 0, category, null, isAdminOverride(player, shop));
+        Inventory inventory = Bukkit.createInventory(holder, 54, Component.text(category.displayName()));
+        holder.inventory(inventory);
+        fill(inventory, Material.GRAY_STAINED_GLASS_PANE);
+
+        List<ItemCatalog.Group> groups = ItemCatalog.groups(category);
+        for (int slot = 0; slot < groups.size() && slot < PAGE_SIZE; slot++) {
+            ItemCatalog.Group group = groups.get(slot);
+            inventory.setItem(slot, namedItem(group.icon(), group.displayName(), NamedTextColor.YELLOW,
+                List.of(Component.text(ItemCatalog.items(group).size() + " items", NamedTextColor.GRAY),
+                    Component.text("Click to view items.", NamedTextColor.DARK_GRAY))));
+        }
+        inventory.setItem(BACK_SLOT, namedItem(Material.ARROW, "Back to Categories", NamedTextColor.YELLOW, List.of()));
+        inventory.setItem(CANCEL_SETUP_SLOT, namedItem(Material.RED_STAINED_GLASS_PANE, "Cancel Setup", NamedTextColor.RED, List.of()));
+        player.openInventory(inventory);
+    }
+
+    public void openItemPicker(Player player, BlockKey signKey, ShopMenuType type, ItemCatalog.Group group, int page) {
+        List<Material> items = ItemCatalog.items(group);
         int maxPage = Math.max(0, (items.size() - 1) / PAGE_SIZE);
         int safePage = Math.max(0, Math.min(page, maxPage));
-        String title = type == ShopMenuType.SELECT_SELL_ITEM ? "Choose Item to Sell" : "Choose Price Item";
         ShopData shop = manager.bySign(signKey);
-        boolean adminOverride = shop != null && !shop.isOwner(player.getUniqueId()) && plugin.canManage(player, shop.ownerUuid());
-        ShopMenuHolder holder = new ShopMenuHolder(signKey, type, safePage, query, adminOverride);
-        Inventory inventory = Bukkit.createInventory(holder, 54, Component.text(title));
+        ShopMenuHolder holder = new ShopMenuHolder(signKey, type, safePage, group.category(), group, isAdminOverride(player, shop));
+        Inventory inventory = Bukkit.createInventory(holder, 54, Component.text(group.displayName()));
         holder.inventory(inventory);
+        fill(inventory, Material.GRAY_STAINED_GLASS_PANE);
 
         int start = safePage * PAGE_SIZE;
         int end = Math.min(start + PAGE_SIZE, items.size());
@@ -112,54 +154,17 @@ public final class ShopMenuService {
             inventory.setItem(i - start, namedItem(material, ItemCatalog.display(material), NamedTextColor.YELLOW,
                 List.of(Component.text("Click to select.", NamedTextColor.GRAY))));
         }
-        inventory.setItem(PREVIOUS_PAGE_SLOT, namedItem(Material.ARROW, "Previous Page", NamedTextColor.YELLOW,
-            List.of(Component.text("Page " + (safePage + 1) + " of " + (maxPage + 1), NamedTextColor.GRAY))));
+        inventory.setItem(BACK_SLOT, namedItem(Material.ARROW, "Back to " + group.category().displayName(), NamedTextColor.YELLOW, List.of()));
+        if (safePage > 0) {
+            inventory.setItem(PREVIOUS_PAGE_SLOT, namedItem(Material.ARROW, "Previous Page", NamedTextColor.YELLOW,
+                List.of(Component.text("Page " + (safePage + 1) + " of " + (maxPage + 1), NamedTextColor.GRAY))));
+        }
         inventory.setItem(CANCEL_SETUP_SLOT, namedItem(Material.RED_STAINED_GLASS_PANE, "Cancel Setup", NamedTextColor.RED, List.of()));
-        inventory.setItem(SEARCH_SLOT, namedItem(Material.SPYGLASS, query == null || query.isBlank() ? "Search Items" : "Search: " + query,
-            NamedTextColor.AQUA, List.of(Component.text("Use an anvil text field to filter items.", NamedTextColor.GRAY))));
-        inventory.setItem(NEXT_PAGE_SLOT, namedItem(Material.ARROW, "Next Page", NamedTextColor.YELLOW,
-            List.of(Component.text("Page " + (safePage + 1) + " of " + (maxPage + 1), NamedTextColor.GRAY))));
-        player.openInventory(inventory);
-    }
-
-    public void openSearch(Player player, BlockKey signKey, ShopMenuType returnType) {
-        ShopData shop = manager.bySign(signKey);
-        boolean adminOverride = shop != null && !shop.isOwner(player.getUniqueId()) && plugin.canManage(player, shop.ownerUuid());
-        ShopSearchHolder holder = new ShopSearchHolder(signKey, returnType, adminOverride);
-        Inventory inventory = Bukkit.createInventory(holder, InventoryType.ANVIL, Component.text("Search Shop Items"));
-        holder.inventory(inventory);
-        inventory.setItem(0, namedItem(Material.PAPER, " ", NamedTextColor.AQUA,
-            List.of(
-                Component.text("Type an item name in the field above.", NamedTextColor.GRAY),
-                Component.text("Example: diamond, oak log, ingot", NamedTextColor.GRAY)
-            )));
-        player.openInventory(inventory);
-    }
-
-    public ItemStack searchResult(String query) {
-        String cleanedQuery = cleanSearchQuery(query);
-        String shown = cleanedQuery.isBlank() ? "Show All Items" : "Search: " + cleanedQuery;
-        ItemStack result = namedItem(Material.COMPASS, shown, NamedTextColor.GREEN,
-            List.of(Component.text("Click the result to search.", NamedTextColor.GRAY)));
-        ItemMeta meta = result.getItemMeta();
-        meta.getPersistentDataContainer().set(searchQueryKey, PersistentDataType.STRING, cleanedQuery);
-        result.setItemMeta(meta);
-        return result;
-    }
-
-    public String searchQuery(ItemStack result) {
-        if (result == null || result.getType() != Material.COMPASS || !result.hasItemMeta()) {
-            return null;
+        if (safePage < maxPage) {
+            inventory.setItem(NEXT_PAGE_SLOT, namedItem(Material.ARROW, "Next Page", NamedTextColor.YELLOW,
+                List.of(Component.text("Page " + (safePage + 1) + " of " + (maxPage + 1), NamedTextColor.GRAY))));
         }
-        return result.getItemMeta().getPersistentDataContainer().get(searchQueryKey, PersistentDataType.STRING);
-    }
-
-    public String cleanSearchQuery(String query) {
-        if (query == null) {
-            return "";
-        }
-        String cleaned = query.strip();
-        return cleaned.equalsIgnoreCase("Type item name") ? "" : cleaned;
+        player.openInventory(inventory);
     }
 
     public void openAmountPicker(Player player, ShopData shop, ShopMenuType type, Material material, int page) {
@@ -167,8 +172,8 @@ public final class ShopMenuService {
         int maxPage = Math.max(0, (quantities.length - 1) / PAGE_SIZE);
         int safePage = Math.max(0, Math.min(page, maxPage));
         String title = type == ShopMenuType.SELECT_SELL_AMOUNT ? "Choose Sell Quantity" : "Choose Price Quantity";
-        ShopMenuHolder holder = new ShopMenuHolder(shop.signKey(), type, safePage, "",
-            !shop.isOwner(player.getUniqueId()) && plugin.canManage(player, shop.ownerUuid()));
+        ShopMenuHolder holder = new ShopMenuHolder(shop.signKey(), type, safePage, null, null,
+            plugin.isMasterOverride(player, shop.ownerUuid()));
         Inventory inventory = Bukkit.createInventory(holder, 54, Component.text(title));
         holder.inventory(inventory);
         int start = safePage * PAGE_SIZE;
@@ -180,21 +185,25 @@ public final class ShopMenuService {
             button.setAmount(amount);
             inventory.setItem(i - start, button);
         }
-        inventory.setItem(PREVIOUS_PAGE_SLOT, namedItem(Material.ARROW, "Previous Page", NamedTextColor.YELLOW, List.of()));
+        inventory.setItem(BACK_SLOT, namedItem(Material.ARROW, "Back to Item Selection", NamedTextColor.YELLOW,
+            List.of(Component.text("Change the selected material without restarting setup.", NamedTextColor.GRAY))));
+        if (safePage > 0) inventory.setItem(PREVIOUS_PAGE_SLOT, namedItem(Material.ARROW, "Previous Page", NamedTextColor.YELLOW, List.of()));
         inventory.setItem(CANCEL_SETUP_SLOT, namedItem(Material.RED_STAINED_GLASS_PANE, "Cancel Setup", NamedTextColor.RED, List.of()));
-        inventory.setItem(NEXT_PAGE_SLOT, namedItem(Material.ARROW, "Next Page", NamedTextColor.YELLOW, List.of()));
+        if (safePage < maxPage) inventory.setItem(NEXT_PAGE_SLOT, namedItem(Material.ARROW, "Next Page", NamedTextColor.YELLOW, List.of()));
         player.openInventory(inventory);
     }
 
     public void openConfirm(Player player, ShopData shop, Material sell, int sellAmount, Material price, int priceAmount) {
         ShopMenuHolder holder = new ShopMenuHolder(shop.signKey(), ShopMenuType.CONFIRM_SETUP,
-            !shop.isOwner(player.getUniqueId()) && plugin.canManage(player, shop.ownerUuid()));
+            plugin.isMasterOverride(player, shop.ownerUuid()));
         Inventory inventory = Bukkit.createInventory(holder, 27, Component.text("Confirm Shop Setup"));
         holder.inventory(inventory);
         fill(inventory, Material.GRAY_STAINED_GLASS_PANE);
         inventory.setItem(4, namedItem(sell, "Sell: " + ItemCatalog.display(sell) + " x" + sellAmount, NamedTextColor.GREEN, List.of()));
         inventory.setItem(22, namedItem(price, "Price: " + ItemCatalog.display(price) + " x" + priceAmount, NamedTextColor.RED, List.of()));
         inventory.setItem(CONFIRM_DONE_SLOT, namedItem(Material.LIME_STAINED_GLASS_PANE, "Done", NamedTextColor.GREEN, List.of()));
+        inventory.setItem(CONFIRM_BACK_SLOT, namedItem(Material.ARROW, "Back to Price Quantity", NamedTextColor.YELLOW,
+            List.of(Component.text("Review or change earlier selections without cancelling.", NamedTextColor.GRAY))));
         inventory.setItem(CONFIRM_CANCEL_SLOT, namedItem(Material.RED_STAINED_GLASS_PANE, "Cancel", NamedTextColor.RED, List.of()));
         player.openInventory(inventory);
     }
@@ -274,18 +283,13 @@ public final class ShopMenuService {
         for (Player viewer : Bukkit.getOnlinePlayers()) {
             Inventory top = viewer.getOpenInventory().getTopInventory();
             boolean shopMenu = top.getHolder() instanceof ShopMenuHolder holder && holder.signKey().equals(shop.signKey());
-            boolean searchMenu = top.getHolder() instanceof ShopSearchHolder holder && holder.signKey().equals(shop.signKey());
-            if (shopMenu || searchMenu || manager.inventoryBelongs(top, shop)) {
-                viewer.closeInventory();
-            }
+            if (shopMenu || manager.inventoryBelongs(top, shop)) viewer.closeInventory();
         }
     }
 
     public void updateSign(ShopData shop) {
         Block block = shop.signKey().block();
-        if (block == null || !(block.getState() instanceof Sign sign)) {
-            return;
-        }
+        if (block == null || !(block.getState() instanceof Sign sign)) return;
         SignSide side = sign.getSide(Side.FRONT);
         side.line(0, Component.text("[shop]", NamedTextColor.GOLD));
         side.line(1, Component.text(shop.ownerName(), NamedTextColor.WHITE));
@@ -299,6 +303,17 @@ public final class ShopMenuService {
         side.setGlowingText(false);
         sign.setWaxed(true);
         sign.update(true, false);
+    }
+
+    private boolean isAdminOverride(Player player, ShopData shop) {
+        return shop != null && plugin.isMasterOverride(player, shop.ownerUuid());
+    }
+
+    private String selectionTitle(ShopMenuType type, String suffix) {
+        boolean sell = type == ShopMenuType.SELECT_SELL_CATEGORY
+            || type == ShopMenuType.SELECT_SELL_GROUP
+            || type == ShopMenuType.SELECT_SELL_ITEM;
+        return (sell ? "Sell Item " : "Price Item ") + suffix;
     }
 
     private void fill(Inventory inventory, Material material) {
