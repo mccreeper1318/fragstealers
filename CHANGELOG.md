@@ -1,61 +1,72 @@
 # FragStealers Changelog
 
-## 26.2-1.1.5-rc.1
-
-### Changed
-
-- Replaced the shop anvil search with a categorized item picker that organizes sale and payment materials into main categories and subcategories.
-- Limited shop item pagination to individual subcategories and added consistent Back, Previous Page, Next Page, and Cancel Setup navigation.
-- Changed known-player resolution for delegated lock and mailbox creation and `/fs trust` to use actual server play history instead of the profile cache.
-- Folded the existing trusted-shop menu and stock safeguards directly into the shop source so the categorized picker preserves access-level restocking, manage-level controls, and Master Key fallback behavior.
-
-### Fixed
-
-- Fixed issue #11 where valid offline players could be rejected for delegated ownership or trust when their profile was not currently cached.
-- Fixed issue #12 where a newly created lock could appear successful in memory even when `locks.yml` failed to persist; failed lock creates now roll back their in-memory registration.
-- Fixed issue #13 by removing the unreliable anvil search holder and refresh listener and replacing them with organized category, subcategory, and item menus.
-- Fixed issue #14 so pushes to `dev/**` branches receive automatic validation builds before release work is promoted.
-- Fixed issue #15 so ordinary players can still put text on the second line of an `[fs]` sign without being rejected; delegated ownership is only interpreted when the creator is authorized and holding a genuine Master Key in either hand.
-- Fixed issue #16 by updating the compile dependency from the Paper 26.2 beta API to `paper-api:26.2.build.117-stable`.
-- Fixed shop setup navigation after item selection by adding Back controls to quantity and confirmation screens while preserving the active `SetupSession`, selected materials, quantities, subcategories, and item pages.
-- Added a Back path from price-category selection to the saved sell quantity so earlier sale-item mistakes can be corrected without cancelling and restarting shop setup.
-
-### Documentation
-
-- Updated shop setup documentation for the categorized item picker and documented server-history-based known-player resolution.
-
-### Build and Release
-
-- Added `dev/**` to the automatic push-build branch filter while keeping prerelease publishing restricted to the existing authorized prerelease flow.
-- Updated the pinned Paper compile API to the stable `26.2.build.117-stable` release.
-- Renamed the current release line from `26.2-7` to `26.2-1.1.5` and updated release/prerelease validation for the semantic plugin-version suffix.
-
-## 26.2-1.1.5-beta.1
+## 26.2-1.1.5
 
 ### Added
 
-- Added delegated `[fs]` lock creation for authorized administrators holding a genuine Master Key in either hand.
-- Added support for entering a known player's name on the second line of an `[fs]` sign to register the lock under that player's UUID.
-- Added audit-log entries whenever an administrator creates a storage lock on behalf of another player.
+- Added delegated `[fs]` storage-lock creation for authorized administrators holding a genuine Master Key, with ownership stored under a known target player's UUID and delegated actions recorded in `audit-log.yml`.
+- Replaced the shop anvil search with a categorized sale/payment picker with category, subcategory, pagination, Back, and Cancel controls.
+- Added automated behavioral regression tests for protected inventories, live authorization changes, shop stock rules, mailbox read-only behavior, stale inventory views, double-chest edge cases, and persistence failures.
 
 ### Changed
 
-- Changed ordinary `[fs]` locks to allow protecting chests, double chests, trapped chests, and barrels that already contain items.
-- Kept the empty-container requirement for `[fs shop]` and `[fs mail]` creation.
-- Updated the stable Gradle project version to `26.2-1.1.5` so `26.2-1.1.5-beta.1` prerelease builds pass release-version validation.
+- Changed ordinary `[fs]` locks so supported containers can be protected even when they already contain items; shops and mailboxes still require empty containers at creation.
+- Changed known-player lookup for delegated lock/mailbox creation and `/fs trust` to use actual server play history instead of requiring a live profile-cache hit.
+- Changed shop payment handling to preserve exact withdrawn `ItemStack` metadata instead of reducing payments to material and count.
+- Changed Master Key-origin shop stock sessions to recompute independent trust after the key is removed: `manage` keeps full stock access, `access` falls back to restock-only, and no remaining permission closes the view.
+- Continued live authorization revalidation for lock, shop, and mailbox sessions so trust revocation and downgrades take effect without a reconnect.
+- Renamed the current release line from `26.2-7` to `26.2-1.1.5`; the normal artifact is now `FragStealers-26.2-1.1.5.jar`.
 
 ### Fixed
 
-- Fixed a P1 protection bypass where players who already had a nonempty container open could keep withdrawing items after an `[fs]` lock was created.
+- Fixed issue #11 where valid offline or uncached players could be rejected for delegated ownership or trust.
+- Fixed issue #12 where failed lock creation persistence could leave a lock registered only in memory.
+- Fixed issue #13 by removing the unreliable anvil search holder and refresh listener and replacing them with organized category, subcategory, and item menus.
+- Fixed issue #14 so pushes to `dev/**` branches receive automatic validation builds before release work is promoted.
+- Fixed issue #15 so ordinary players can still put text on the second line of an `[fs]` sign without it being misinterpreted as delegated ownership.
+- Fixed issue #16 by updating the compile dependency from the Paper 26.2 beta API to `paper-api:26.2.build.117-stable`.
+- Fixed unsafe shop payment-material handling and preserved exact item metadata for collected payments.
+- Fixed stale or pre-opened physical shop inventory views and missing stock sessions bypassing shop stock authorization.
+- Fixed protection and transaction mutations leaving inconsistent in-memory or player-facing state when YAML persistence fails.
+- Fixed mailbox pickup rollback overwriting unrelated player inventory changes by recovering only transaction-specific items.
+- Fixed stale physical mailbox viewers remaining open when a container is converted into a mailbox.
+- Fixed newly attached mailbox chest halves having a temporary protection gap before deferred refresh.
+- Fixed direct physical mailbox backing inventories being openable through plugin/API paths outside normal block interaction.
+- Fixed shop stock sessions opened with a Master Key closing unnecessarily when the player still has independent `access` or `manage` trust.
+- Fixed shop setup navigation after item selection by adding Back controls while preserving the active setup state.
 
 ### Security
 
-- Restricted delegated lock ownership to known server players and administrators with `fragstealers.masterkey.use` who are actively holding a genuine Master Key.
-- Closed all existing container viewers immediately after lock creation so renewed access must pass the normal owner, trusted-player, or Master Key authorization checks.
+- Existing viewers of newly protected lock, shop, and mailbox containers are closed or revalidated so stale vanilla inventories cannot bypass authorization.
+- Physical shop and mailbox backing inventories fail closed on unauthorized or unexpected click/drag interactions.
+- Newly connected protected double-chest halves are resolved without leaving an unprotected interaction window before deferred container refresh.
+- Delegated ownership is limited to known players and administrators who have the Master Key permission and a genuine key in the permitted hand.
+- Shop payment selection rejects unsafe or internal items, and Master Keys remain excluded from shop stock/payment and mailbox contents.
+
+### Persistence and Recovery
+
+- Added transactional rollback for trust, protection, shop, and mailbox mutations when durable YAML writes fail.
+- Added rollback for failed container-refresh persistence so in-memory container mappings do not drift from disk.
+- Hardened mailbox pickup recovery with transaction-specific item identity, armor-slot coverage, and stale recovery-marker cleanup on join.
+- Continued using atomic YAML writes for FragStealers data files.
+
+### Testing
+
+- Added JUnit and Mockito behavioral coverage to the Gradle build and GitHub Actions.
+- Added failure-injection coverage for locks, shops, mailboxes, trust, audit logs, and transaction-level persistence flows.
+- Made the shop catalog and item checks safe to initialize in headless behavioral tests.
+- Behavioral test failures now fail CI with full failure output.
 
 ### Documentation
 
-- Documented delegated lock creation, existing-item lock support, Master Key requirements, and delegated-lock audit logging.
+- Updated the README for delegated locks, categorized shop setup, server-history player lookup, current protection safeguards, persistence recovery, and release automation.
+
+### Build and Release
+
+- Added `dev/**` push validation while keeping automatic prerelease publishing restricted to authorized `agent/**` prerelease commits.
+- Updated the pinned Paper API to `paper-api:26.2.build.117-stable`.
+- Updated build/release validation for `26.2-1.1.5` and semantic prerelease suffixes such as `-beta.1` and `-rc.1`, while retaining legacy 26.2 update-number tags for historical rebuilds.
+- Release builds validate the JAR filename, required resources, embedded `plugin.yml` version, and upload a SHA-256 checksum.
 
 ## 26.2-6-rc.2
 
