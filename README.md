@@ -1,4 +1,4 @@
-# FragStealers 26.2-7
+# FragStealers 26.2-1.1.5
 
 FragStealers is a Paper plugin for protecting player storage, operating secure container shops, sending items through virtual mailboxes, sharing controlled access with trusted players, and giving administrators a logged recovery tool.
 
@@ -10,7 +10,7 @@ FragStealers is a Paper plugin for protecting player storage, operating secure c
 ## Installation
 
 1. Stop the server.
-2. Place `FragStealers-26.2-7.jar` in the server's `plugins` folder.
+2. Place `FragStealers-26.2-1.1.5.jar` in the server's `plugins` folder.
 3. Start the server.
 4. Review `plugins/FragStealers/config.yml`.
 

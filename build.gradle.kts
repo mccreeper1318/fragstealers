@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "me.pinnacle"
-version = "26.2-7"
+version = "26.2-1.1.5"
 
 description = "Unified chest locks, player shops, mailboxes, and administrative recovery tools for Paper 26.2."
 

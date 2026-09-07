@@ -1,6 +1,6 @@
 # FragStealers Changelog
 
-## 26.2-7-rc.1
+## 26.2-1.1.5-rc.1
 
 ### Changed
 
@@ -28,8 +28,9 @@
 
 - Added `dev/**` to the automatic push-build branch filter while keeping prerelease publishing restricted to the existing authorized prerelease flow.
 - Updated the pinned Paper compile API to the stable `26.2.build.117-stable` release.
+- Renamed the current release line from `26.2-7` to `26.2-1.1.5` and updated release/prerelease validation for the semantic plugin-version suffix.
 
-## 26.2-7-beta.1
+## 26.2-1.1.5-beta.1
 
 ### Added
 
@@ -41,7 +42,7 @@
 
 - Changed ordinary `[fs]` locks to allow protecting chests, double chests, trapped chests, and barrels that already contain items.
 - Kept the empty-container requirement for `[fs shop]` and `[fs mail]` creation.
-- Updated the stable Gradle project version to `26.2-7` so `26.2-7-beta.1` prerelease builds pass release-version validation.
+- Updated the stable Gradle project version to `26.2-1.1.5` so `26.2-1.1.5-beta.1` prerelease builds pass release-version validation.
 
 ### Fixed
 
