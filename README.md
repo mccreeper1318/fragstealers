@@ -1,4 +1,4 @@
-# FragStealers 26.2-1.1.5
+# FragStealers 26.2-1.1.6
 
 FragStealers is a Paper plugin for protecting player storage, operating secure container shops, sending items through virtual mailboxes, sharing controlled access with trusted players, and giving administrators a logged recovery tool.
 
@@ -10,7 +10,7 @@ FragStealers is a Paper plugin for protecting player storage, operating secure c
 ## Installation
 
 1. Stop the server.
-2. Place `FragStealers-26.2-1.1.5.jar` in the server's `plugins` folder.
+2. Place `FragStealers-26.2-1.1.6.jar` in the server's `plugins` folder.
 3. Start the server.
 4. Review `plugins/FragStealers/config.yml`.
 
@@ -287,14 +287,14 @@ Audit entries older than 30 days are purged automatically.
 
 ## Build, test, and release verification
 
-FragStealers 26.2-1.1.5 is built with Java 25 against `paper-api:26.2.build.117-stable`.
+FragStealers 26.2-1.1.6 is built with Java 25 against `paper-api:26.2.build.117-stable`.
 
-The Gradle build runs automated behavioral regression tests for protection and inventory authorization as well as persistence-failure recovery. GitHub Actions validates pull requests and pushes to `main`, `agent/**`, and `dev/**`, with manual build dispatch also supported.
+The Gradle build runs automated behavioral regression tests for protection and inventory authorization as well as persistence-failure recovery. GitHub Actions validates pull requests and pushes to `main`, `dev`, `agent/**`, and `dev/**`, with manual build dispatch also supported.
 
-Automatic prerelease publishing remains restricted to the authorized `agent/**` commit-marker flow. The workflows understand the current semantic plugin suffix format, including versions such as `26.2-1.1.5-beta.1` and `26.2-1.1.5-rc.1`, while older 26.2 update-number tags remain accepted for historical rebuilds.
+Automatic prerelease publishing remains restricted to the authorized `agent/**` commit-marker flow. The workflows understand the current semantic plugin suffix format, including versions such as `26.2-1.1.6-beta.1` and `26.2-1.1.6-rc.1`, while older 26.2 update-number tags remain accepted for historical rebuilds.
 
 Release packaging verifies the expected JAR filename, required `plugin.yml` and `config.yml` resources, and the embedded plugin version before upload. Release builds also generate a SHA-256 checksum. The stable artifact name for this release is:
 
 ```text
-FragStealers-26.2-1.1.5.jar
+FragStealers-26.2-1.1.6.jar
 ```
