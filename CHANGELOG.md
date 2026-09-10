@@ -6,6 +6,10 @@
 
 - Added Dependabot version-update configuration for Gradle dependencies and GitHub Actions, with update pull requests targeting the `dev` branch.
 
+### Fixed
+
+- Fixed the GitHub Actions build workflow so direct pushes to the `dev` branch trigger validation builds in addition to `dev/**` branches.
+
 ### Build and Release
 
 - Configured weekly Dependabot checks for supported Gradle and GitHub Actions dependencies.
