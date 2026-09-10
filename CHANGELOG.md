@@ -1,5 +1,21 @@
 # FragStealers Changelog
 
+## 26.2-1.1.6
+
+### Added
+
+- Added Dependabot version-update configuration for Gradle dependencies and GitHub Actions, with update pull requests targeting the `dev` branch.
+
+### Fixed
+
+- Fixed the GitHub Actions build workflow so direct pushes to the `dev` branch trigger validation builds in addition to `dev/**` branches.
+
+### Build and Release
+
+- Configured weekly Dependabot checks for supported Gradle and GitHub Actions dependencies.
+- Explicitly excluded `io.papermc.paper:paper-api` from Dependabot updates so Paper API upgrades remain manually managed and pinned.
+- Advanced the development project version to `26.2-1.1.6`.
+
 ## 26.2-1.1.5
 
 ### Added
