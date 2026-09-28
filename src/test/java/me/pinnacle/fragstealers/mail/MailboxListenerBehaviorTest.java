@@ -9,6 +9,7 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
@@ -47,6 +48,7 @@ class MailboxListenerBehaviorTest {
     private MailboxMenuService menus;
     private MasterKeyManager masterKeys;
     private Player player;
+    private PlayerInventory playerInventory;
     private MailboxData mailbox;
     private MailboxListener listener;
 
@@ -58,7 +60,7 @@ class MailboxListenerBehaviorTest {
         masterKeys = mock(MasterKeyManager.class);
         BukkitScheduler scheduler = mock(BukkitScheduler.class);
         Server server = mock(Server.class);
-        PlayerInventory playerInventory = mock(PlayerInventory.class);
+        playerInventory = mock(PlayerInventory.class);
         player = mock(Player.class);
         mailbox = new MailboxData(SIGN, Set.of(CONTAINER), OWNER, "Owner");
 
@@ -125,6 +127,21 @@ class MailboxListenerBehaviorTest {
 
         InventoryClickEvent event = click(holder, 0, InventoryAction.PLACE_ALL);
         when(event.getCursor()).thenReturn(masterKey);
+        listener.onInventoryClick(event);
+
+        verify(event).setCancelled(true);
+    }
+
+    @Test
+    void paper26_3HotbarSwapStillBlocksOffhandMasterKeyDeposit() {
+        MailboxMenuHolder holder = new MailboxMenuHolder(SIGN, MailboxMenuType.DEPOSIT, new boolean[27], null, false);
+        ItemStack masterKey = item(Material.WOODEN_AXE);
+        when(masterKeys.isMasterKey(masterKey)).thenReturn(true);
+        when(playerInventory.getItemInOffHand()).thenReturn(masterKey);
+
+        InventoryClickEvent event = click(holder, 0, InventoryAction.HOTBAR_SWAP);
+        when(event.getClick()).thenReturn(ClickType.SWAP_OFFHAND);
+
         listener.onInventoryClick(event);
 
         verify(event).setCancelled(true);
