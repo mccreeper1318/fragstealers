@@ -5,9 +5,9 @@ plugins {
 }
 
 group = "me.pinnacle"
-version = "26.2-1.1.6"
+version = "26.3-1.2.0"
 
-description = "Unified chest locks, player shops, mailboxes, and administrative recovery tools for Paper 26.2."
+description = "Unified chest locks, player shops, mailboxes, and administrative recovery tools for Paper 26.3."
 
 repositories {
     maven {
@@ -18,9 +18,9 @@ repositories {
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:26.2.build.117-stable")
+    compileOnly("io.papermc.paper:paper-api:26.3.build.134-beta")
 
-    testImplementation("io.papermc.paper:paper-api:26.2.build.117-stable")
+    testImplementation("io.papermc.paper:paper-api:26.3.build.134-beta")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.3")
     testImplementation("org.mockito:mockito-core:5.23.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.3")
