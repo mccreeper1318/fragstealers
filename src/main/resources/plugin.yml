@@ -1,7 +1,7 @@
 name: FragStealers
 version: '${version}'
 main: me.pinnacle.fragstealers.FragStealers
-api-version: '26.2'
+api-version: '26.3'
 author: Kevin
 description: Unified storage locks, player shops, mailboxes, and administrative recovery tools.
 
