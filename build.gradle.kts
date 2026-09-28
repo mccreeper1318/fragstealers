@@ -137,6 +137,7 @@ sourceSets.named("main") {
 
 tasks.named<JavaCompile>("compileJava") {
     dependsOn(preparePatchedSources)
+    options.compilerArgs.addAll(listOf("-Xlint:removal", "-Werror"))
 }
 
 tasks.test {
