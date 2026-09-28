@@ -1,6 +1,6 @@
 --- fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemCatalog.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemCatalog.java
-@@ -97,5 +97,6 @@
+@@ -99,5 +99,6 @@
          if (!isAllowed(material)) return false;
          String name = material.name();
          if (UNSAFE_PAYMENT.contains(name)) return false;
