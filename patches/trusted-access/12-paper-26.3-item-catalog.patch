@@ -10,7 +10,7 @@
 @@ -241,3 +242,4 @@
          if (name.startsWith("DARK_OAK_")) return Group.DARK_OAK;
          if (name.startsWith("PALE_OAK_")) return Group.PALE_OAK;
-+        if (name.startsWith("POPLAR_")) return Group.POPLAR;
++        if (name.startsWith("POPLAR_") || name.startsWith("STRIPPED_POPLAR_")) return Group.POPLAR;
          if (name.startsWith("OAK_")) return Group.OAK;
 @@ -320,5 +322,6 @@
          if (hasAny(name, "PAINTING", "ITEM_FRAME", "ARMOR_STAND", "FLOWER_POT", "DECORATED_POT", "SKULL", "HEAD")) {
