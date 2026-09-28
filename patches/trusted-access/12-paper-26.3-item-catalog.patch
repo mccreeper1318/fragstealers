@@ -1,0 +1,39 @@
+--- fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemCatalog.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemCatalog.java
+@@ -97,5 +97,6 @@
+         if (!isAllowed(material)) return false;
+         String name = material.name();
+         if (UNSAFE_PAYMENT.contains(name)) return false;
++        if (name.endsWith("_MAP")) return false;
+         if (name.endsWith("POTION")) return false;
+         if (name.startsWith("FIREWORK_")) return false;
+@@ -241,3 +242,4 @@
+         if (name.startsWith("DARK_OAK_")) return Group.DARK_OAK;
+         if (name.startsWith("PALE_OAK_")) return Group.PALE_OAK;
++        if (name.startsWith("POPLAR_")) return Group.POPLAR;
+         if (name.startsWith("OAK_")) return Group.OAK;
+@@ -320,5 +322,6 @@
+         if (hasAny(name, "PAINTING", "ITEM_FRAME", "ARMOR_STAND", "FLOWER_POT", "DECORATED_POT", "SKULL", "HEAD")) {
+             return Group.ART_DISPLAY;
+         }
+ 
++        if (name.equals("STRAW_BED") || name.endsWith("_CUSHION")) return Group.CAMPING_COMFORT;
+         if (material.isBlock()) {
+@@ -347,2 +350,2 @@
+         return hasAny(name, "LEAVES", "SAPLING", "FLOWER", "GRASS", "MOSS", "AZALEA", "VINE", "LILY", "MUSHROOM",
+-            "CACTUS", "KELP", "SEAGRASS", "DRIPLEAF", "SPORE_BLOSSOM", "FERN", "BUSH", "ROOTS");
++            "CACTUS", "KELP", "SEAGRASS", "DRIPLEAF", "SPORE_BLOSSOM", "FERN", "BUSH", "SHRUB", "ROOTS");
+@@ -413,5 +416,6 @@
+         MANGROVE(Category.WOOD_NATURAL, "Mangrove", Material.MANGROVE_LOG),
+         CHERRY(Category.WOOD_NATURAL, "Cherry", Material.CHERRY_LOG),
+         PALE_OAK(Category.WOOD_NATURAL, "Pale Oak", Material.PALE_OAK_LOG),
++        POPLAR(Category.WOOD_NATURAL, "Poplar", Material.POPLAR_LOG),
+         BAMBOO(Category.WOOD_NATURAL, "Bamboo", Material.BAMBOO_BLOCK),
+         CRIMSON(Category.WOOD_NATURAL, "Crimson", Material.CRIMSON_STEM),
+@@ -443,5 +447,6 @@
+         WOOL_CARPETS(Category.DECORATION, "Wool & Carpets", Material.WHITE_WOOL),
+         BANNERS_DYES(Category.DECORATION, "Banners & Dyes", Material.RED_DYE),
+         LIGHTING(Category.DECORATION, "Lighting", Material.LANTERN),
+         ART_DISPLAY(Category.DECORATION, "Art & Display", Material.PAINTING),
++        CAMPING_COMFORT(Category.DECORATION, "Camping & Comfort", Material.STRAW_BED),
+ 
