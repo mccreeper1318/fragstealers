@@ -1,14 +1,21 @@
 --- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemCatalog.java
 +++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ItemCatalog.java
-@@ -135,1 +135,1 @@
+@@ -135,1 +135,5 @@
 -    private static Group classify(Material material) {
 +    static Group classify(Material material) {
-@@ -199,3 +199,4 @@
++        return classify(material, Material::isEdible);
++    }
++
++    static Group classify(Material material, java.util.function.Predicate<Material> edible) {
+@@ -199,3 +203,4 @@
          if (name.startsWith("DARK_OAK_")) return Group.DARK_OAK;
          if (name.startsWith("PALE_OAK_")) return Group.PALE_OAK;
 +        if (name.startsWith("POPLAR_") || name.startsWith("STRIPPED_POPLAR_")) return Group.POPLAR;
          if (name.startsWith("OAK_")) return Group.OAK;
-@@ -278,5 +279,7 @@
+@@ -227,1 +232,1 @@
+-        if (material.isEdible()) {
++        if (edible.test(material)) {
+@@ -278,5 +283,7 @@
          if (hasAny(name, "PAINTING", "ITEM_FRAME", "ARMOR_STAND", "FLOWER_POT", "DECORATED_POT", "SKULL", "HEAD")) {
              return Group.ART_DISPLAY;
          }
@@ -16,18 +23,18 @@
 +        if (name.endsWith("_MAP")) return Group.BOOKS_MAPS;
 +        if (name.equals("STRAW_BED") || name.endsWith("_CUSHION")) return Group.CAMPING_COMFORT;
          if (material.isBlock()) {
-@@ -305,2 +308,2 @@
+@@ -305,2 +313,2 @@
          return hasAny(name, "LEAVES", "SAPLING", "FLOWER", "GRASS", "MOSS", "AZALEA", "VINE", "LILY", "MUSHROOM",
 -            "CACTUS", "KELP", "SEAGRASS", "DRIPLEAF", "SPORE_BLOSSOM", "FERN", "BUSH", "ROOTS");
 +            "CACTUS", "KELP", "SEAGRASS", "DRIPLEAF", "SPORE_BLOSSOM", "FERN", "BUSH", "SHRUB", "ROOTS");
-@@ -371,5 +374,6 @@
+@@ -371,5 +379,6 @@
          MANGROVE(Category.WOOD_NATURAL, "Mangrove", Material.MANGROVE_LOG),
          CHERRY(Category.WOOD_NATURAL, "Cherry", Material.CHERRY_LOG),
          PALE_OAK(Category.WOOD_NATURAL, "Pale Oak", Material.PALE_OAK_LOG),
 +        POPLAR(Category.WOOD_NATURAL, "Poplar", Material.POPLAR_LOG),
          BAMBOO(Category.WOOD_NATURAL, "Bamboo", Material.BAMBOO_BLOCK),
          CRIMSON(Category.WOOD_NATURAL, "Crimson", Material.CRIMSON_STEM),
-@@ -401,5 +405,6 @@
+@@ -401,5 +410,6 @@
          WOOL_CARPETS(Category.DECORATION, "Wool & Carpets", Material.WHITE_WOOL),
          BANNERS_DYES(Category.DECORATION, "Banners & Dyes", Material.RED_DYE),
          LIGHTING(Category.DECORATION, "Lighting", Material.LANTERN),
