@@ -75,6 +75,6 @@ class ItemCatalog26_3Test {
     }
 
     private static void assertGroup(Material material, ItemCatalog.Group expected) {
-        assertEquals(expected, ItemCatalog.classify(material), material.name());
+        assertEquals(expected, ItemCatalog.classify(material, ignored -> false), material.name());
     }
 }
