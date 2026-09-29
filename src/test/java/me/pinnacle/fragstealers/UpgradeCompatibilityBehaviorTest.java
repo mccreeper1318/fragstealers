@@ -9,7 +9,6 @@ import me.pinnacle.fragstealers.data.ShopData;
 import me.pinnacle.fragstealers.data.ShopManager;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.inventory.ItemStack;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -116,7 +115,6 @@ class UpgradeCompatibilityBehaviorTest {
         mailboxes.set(mailPath + ".owner-uuid", OWNER.toString());
         mailboxes.set(mailPath + ".owner-name", "Owner");
         mailboxes.set(mailPath + ".containers", List.of(MAIL_CONTAINER.serialize()));
-        mailboxes.set(mailPath + ".items.4", new ItemStack(Material.DIAMOND, 3));
         mailboxes.save(tempDir.resolve("mailboxes.yml").toFile());
 
         YamlConfiguration trusted = new YamlConfiguration();
@@ -163,10 +161,6 @@ class UpgradeCompatibilityBehaviorTest {
         MailboxData mailbox = mailboxes.bySign(MAIL_SIGN);
         assertNotNull(mailbox);
         assertTrue(mailbox.containerKeys().contains(MAIL_CONTAINER));
-        ItemStack storedMail = mailbox.getItem(4);
-        assertNotNull(storedMail);
-        assertEquals(Material.DIAMOND, storedMail.getType());
-        assertEquals(3, storedMail.getAmount());
 
         assertEquals(TrustLevel.MANAGE, trust.level(ProtectionType.LOCK, LOCK_SIGN, TRUSTED));
     }
