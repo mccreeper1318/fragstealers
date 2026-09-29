@@ -63,21 +63,24 @@ jobs:
           BUILD_VERSION="$PROJECT_VERSION"
           RELEASE_TAG=""
           PUBLISH_PRERELEASE=false
+          PRERELEASE_TAG_PATTERN='^([0-9]+\.[0-9]+-[0-9]+(\.[0-9]+)*)-([0-9A-Za-z]+(\.[0-9A-Za-z]+)*)$'
 
           if [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF" == refs/heads/agent/* ]]; then
             COMMIT_MESSAGE="$(git log -1 --pretty=%B)"
 
-            if [[ "$COMMIT_MESSAGE" =~ \[prerelease[[:space:]]+([0-9]+\.[0-9]+-([0-9]+|[0-9]+\.[0-9]+\.[0-9]+)-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)\] ]]; then
+            if [[ "$COMMIT_MESSAGE" =~ \[prerelease[[:space:]]+([0-9A-Za-z.-]+)\] ]]; then
               RELEASE_TAG="${BASH_REMATCH[1]}"
-              BUILD_VERSION="$RELEASE_TAG"
-              PUBLISH_PRERELEASE=true
 
-              if [[ "$RELEASE_TAG" =~ ^([0-9]+\.[0-9]+-([0-9]+|[0-9]+\.[0-9]+\.[0-9]+))-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*$ ]]; then
+              if [[ "$RELEASE_TAG" =~ $PRERELEASE_TAG_PATTERN ]]; then
                 BASE_VERSION="${BASH_REMATCH[1]}"
               else
                 echo "Invalid prerelease marker version: $RELEASE_TAG"
+                echo "Expected a tag like 26.3-1.2.0-beta.1 or 26.2-7-rc.1."
                 exit 1
               fi
+
+              BUILD_VERSION="$RELEASE_TAG"
+              PUBLISH_PRERELEASE=true
 
               if [[ "$PROJECT_VERSION" != "$BASE_VERSION" ]]; then
                 echo "Prerelease marker base version does not match the Gradle project version."
