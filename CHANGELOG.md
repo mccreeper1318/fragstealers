@@ -1,5 +1,49 @@
 # FragStealers Changelog
 
+## 26.3-1.2.0
+
+### Added
+
+- Added Paper 26.3 item-catalog coverage for the new Poplar wood family, red shrubs, shelf mushrooms, straw beds, all cushion colors, concrete slab/stair variants, wool slab/stair variants, and explorer-map variants.
+- Added dedicated `Poplar` and `Camping & Comfort` shop catalog groups for the new 26.3 materials where existing groups were not appropriate.
+- Added automated 26.2-to-26.3 upgrade compatibility coverage for existing locks, shops and stored earnings, mailbox registrations, trusted-player mappings, audit data, and configuration.
+
+### Changed
+
+- Updated FragStealers from the Paper 26.2 release line to the pinned Paper `26.3.build.134-beta` API while continuing to require Java 25.
+- Updated `plugin.yml` to declare Paper API version `26.3` and advanced the plugin version to `26.3-1.2.0`.
+- Updated the shop catalog classifier for Paper 26.3 materials while preserving the existing dynamic `Material`-based catalog behavior and runtime stack-size handling.
+- Classified all 26.3 explorer-map variants under Books & Maps before wood-family prefix matching so maps such as the Jungle Pyramid map cannot fall into a wood category.
+- Kept specialized `*_MAP` items available as sale stock while excluding them from payment selection because their state cannot be represented safely as material-and-count currency.
+- Kept the existing FragStealers YAML persistence formats unchanged for the 26.3 update; no migration format was introduced for locks, shops, mailboxes, trust, audit data, or configuration.
+
+### Fixed
+
+- Replaced Paper's removed `InventoryAction.HOTBAR_MOVE_AND_READD` handling with `HOTBAR_SWAP` for protected shop and mailbox inventory interactions.
+- Fixed 26.3 explorer maps being vulnerable to incorrect wood-family classification when their names begin with prefixes such as `JUNGLE_`.
+- Kept direct physical shop backing inventories fail-closed when a click occurs without a valid stock session.
+
+### Security
+
+- Preserved shop and mailbox hotbar/offhand protections under Paper 26.3's consolidated `HOTBAR_SWAP` inventory action.
+- Preserved hopper restrictions for ordinary locks and continued blocking hopper transfers that touch protected shops.
+- Continued rejecting unsafe/stateful specialized maps as shop payment materials while allowing legitimate use as sale items.
+
+### Testing
+
+- Added focused Paper 26.3 regression tests for shop number-key swaps, mailbox offhand swaps, direct physical shop backing-inventory access, and hopper insertion/extraction restrictions.
+- Added Paper 26.3 catalog regression coverage for Poplar materials, cushions, straw beds, red shrubs, shelf mushrooms, concrete slabs/stairs, wool slabs/stairs, and all explorer-map variants.
+- Added a 26.2-format persistence round-trip test confirming that existing lock records, configured shops and earnings, mailbox registrations, trust mappings, audit entries, and configuration load, save, and reload under the 26.3 code without an unnecessary migration.
+- Reviewed the existing authorization, stale-view, trust-revocation, Master Key, double-chest, shop, mailbox, transaction rollback, persistence-failure, hopper, and backing-inventory regression coverage against Paper 26.3.
+- Continued running the full automated suite and verified `clean build`, JAR validation, and artifact generation against the pinned Paper 26.3 beta API.
+
+### Build and Release
+
+- Added `-Xlint:removal -Werror` to the main Java compile so APIs marked for removal by Paper fail CI instead of silently remaining in the codebase.
+- Kept the Paper API excluded from Dependabot so Paper version changes remain explicitly reviewed and pinned.
+- Updated prerelease version parsing to support multi-part release bases and tags such as `26.3-1.2.0-beta.1` while retaining older formats such as `26.2-7-rc.1`.
+- Prerelease builds continue to require an existing GitHub prerelease and verify that the prerelease base version matches `build.gradle.kts` before uploading JAR and checksum assets.
+
 ## 26.2-1.1.6
 
 ### Added
