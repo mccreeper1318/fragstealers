@@ -35,6 +35,7 @@
 - Added Paper 26.3 catalog regression coverage for Poplar materials, cushions, straw beds, red shrubs, shelf mushrooms, concrete slabs/stairs, wool slabs/stairs, and all explorer-map variants.
 - Added a 26.2-format persistence round-trip test confirming that existing lock records, configured shops and earnings, mailbox registrations, trust mappings, audit entries, and configuration load, save, and reload under the 26.3 code without an unnecessary migration.
 - Reviewed the existing authorization, stale-view, trust-revocation, Master Key, double-chest, shop, mailbox, transaction rollback, persistence-failure, hopper, and backing-inventory regression coverage against Paper 26.3.
+- Completed live Paper 26.3 runtime and 26.2-upgrade compatibility testing with no observed authorization bypass, stale-access, duplication, item-loss, or persistence regression.
 - Continued running the full automated suite and verified `clean build`, JAR validation, and artifact generation against the pinned Paper 26.3 beta API.
 
 ### Build and Release
