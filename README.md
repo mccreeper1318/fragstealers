@@ -1,20 +1,22 @@
-# FragStealers 26.2-1.1.6
+# FragStealers 26.3-1.2.0
 
 FragStealers is a Paper plugin for protecting player storage, operating secure container shops, sending items through virtual mailboxes, sharing controlled access with trusted players, and giving administrators a logged recovery tool.
 
 ## Requirements
 
-- Paper 26.2
+- Paper 26.3
 - Java 25
+
+FragStealers `26.3-1.2.0` is built and validated against the pinned Paper API baseline `paper-api:26.3.build.134-beta`.
 
 ## Installation
 
 1. Stop the server.
-2. Place `FragStealers-26.2-1.1.6.jar` in the server's `plugins` folder.
+2. Place `FragStealers-26.3-1.2.0.jar` in the server's `plugins` folder.
 3. Start the server.
 4. Review `plugins/FragStealers/config.yml`.
 
-When updating from an older version, keep the existing FragStealers data files. New settings and data files are created without replacing existing configuration values.
+When updating from the latest 26.2 release, keep the existing `plugins/FragStealers/` data directory. FragStealers `26.3-1.2.0` keeps the existing lock, shop, mailbox, trust, audit, and configuration persistence formats, so no manual data migration is required. Back up the plugin data directory and worlds before upgrading as normal server maintenance.
 
 ## Supported containers
 
@@ -122,6 +124,8 @@ The physical shop inventory is protected independently from the sign/menu path. 
 
 Shop setup uses organized inventory menus instead of text or anvil search. Choose a main category, then a subcategory, then the exact item. Large subcategories use Previous and Next page controls, and Back buttons return to the previous level without cancelling setup.
 
+Paper 26.3 materials are included in the catalog, including the Poplar wood family, red shrubs, shelf mushrooms, straw beds, cushions, concrete and wool slab/stair variants, and explorer-map variants. New materials are placed into the existing categories where appropriate, with dedicated Poplar and Camping & Comfort groups where needed.
+
 Main categories are:
 
 - Building Blocks
@@ -144,6 +148,8 @@ All materials allowed by the shop catalog remain reachable through these categor
 ### Payments
 
 Payment selection is restricted to safe catalog materials. Master Keys and internal or otherwise unsafe items are excluded from valid shop payment choices.
+
+Specialized Paper 26.3 explorer-map variants can be sold as shop stock but are intentionally excluded from payment selection because their state cannot be safely represented as material-and-count currency.
 
 When a purchase succeeds, FragStealers preserves the exact withdrawn payment item stacks, including their item metadata, when storing payments for later collection. Payment storage and related shop mutations are persisted transactionally so a failed YAML write does not leave only part of the transaction applied.
 
@@ -272,6 +278,12 @@ Do not edit data files while the server is running. FragStealers uses atomic YAM
 
 Player-facing protection, trust, shop, and mailbox mutations that require persistence are guarded so failed durable writes can roll back the associated in-memory or inventory change instead of silently leaving memory and disk out of sync. Container-refresh persistence also restores the prior mapping when a save fails.
 
+### Upgrading from 26.2
+
+The 26.3 release does not introduce a new persistence schema. Existing 26.2-format lock records, shops and stored earnings, mailbox registrations and contents, trusted-player mappings, audit entries, and configuration remain in their existing files.
+
+The upgrade path was covered by automated 26.2-format load/save/reload regression testing and live Paper 26.3 runtime testing. Existing protections and shops do not need to be recreated solely because the server is upgraded to Paper 26.3 and FragStealers `26.3-1.2.0`.
+
 ## Administrative audit log
 
 `audit-log.yml` records administrative actions performed through Master Key access, including:
@@ -285,16 +297,29 @@ Player-facing protection, trust, shop, and mailbox mutations that require persis
 
 Audit entries older than 30 days are purged automatically.
 
+## Paper 26.3 compatibility
+
+FragStealers `26.3-1.2.0` updates the plugin for Paper 26.3 while preserving existing behavior and data formats.
+
+Notable compatibility work includes:
+
+- Replacing Paper's removed `InventoryAction.HOTBAR_MOVE_AND_READD` handling with `HOTBAR_SWAP` for protected shop and mailbox interactions.
+- Auditing and classifying new Paper/Minecraft 26.3 materials in the shop catalog.
+- Keeping stateful explorer-map variants out of shop payment selection.
+- Compiling with `-Xlint:removal -Werror` so APIs marked for removal fail CI instead of remaining unnoticed.
+- Regression testing locks, shops, mailboxes, trust changes, Master Key changes, hopper restrictions, stale inventory views, double-chest behavior, persistence recovery, and backing-inventory protections.
+- Completing live Paper 26.3 runtime and 26.2-upgrade compatibility testing without an observed authorization bypass, duplication, item-loss, or persistence regression.
+
 ## Build, test, and release verification
 
-FragStealers 26.2-1.1.6 is built with Java 25 against `paper-api:26.2.build.117-stable`.
+FragStealers `26.3-1.2.0` is built with Java 25 against `paper-api:26.3.build.134-beta`.
 
-The Gradle build runs automated behavioral regression tests for protection and inventory authorization as well as persistence-failure recovery. GitHub Actions validates pull requests and pushes to `main`, `dev`, `agent/**`, and `dev/**`, with manual build dispatch also supported.
+The Gradle build runs automated behavioral regression tests for protection and inventory authorization as well as persistence-failure and upgrade compatibility coverage. GitHub Actions validates pull requests and pushes to `main`, `dev`, `agent/**`, and `dev/**`, with manual build dispatch also supported.
 
-Automatic prerelease publishing remains restricted to the authorized `agent/**` commit-marker flow. The workflows understand the current semantic plugin suffix format, including versions such as `26.2-1.1.6-beta.1` and `26.2-1.1.6-rc.1`, while older 26.2 update-number tags remain accepted for historical rebuilds.
+Automatic prerelease publishing remains restricted to the authorized `agent/**` commit-marker flow. The workflow accepts prerelease versions such as `26.3-1.2.0-beta.1` and `26.3-1.2.0-rc.1` while retaining older release-line formats for historical rebuilds.
 
 Release packaging verifies the expected JAR filename, required `plugin.yml` and `config.yml` resources, and the embedded plugin version before upload. Release builds also generate a SHA-256 checksum. The stable artifact name for this release is:
 
 ```text
-FragStealers-26.2-1.1.6.jar
+FragStealers-26.3-1.2.0.jar
 ```
