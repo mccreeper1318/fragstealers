@@ -7,7 +7,7 @@ FragStealers is a Paper plugin for protecting player storage, operating secure c
 - Paper 26.3
 - Java 25
 
-FragStealers `26.3-1.2.0` is built and validated against the pinned Paper API baseline `paper-api:26.3.build.134-beta`.
+FragStealers `26.3-1.2.0` is built and validated against the pinned Paper API baseline `paper-api:26.3.build.159-beta`.
 
 ## Installation
 
@@ -312,7 +312,7 @@ Notable compatibility work includes:
 
 ## Build, test, and release verification
 
-FragStealers `26.3-1.2.0` is built with Java 25 against `paper-api:26.3.build.134-beta`.
+FragStealers `26.3-1.2.0` is built with Java 25 against `paper-api:26.3.build.159-beta`.
 
 The Gradle build runs automated behavioral regression tests for protection and inventory authorization as well as persistence-failure and upgrade compatibility coverage. GitHub Actions validates pull requests and pushes to `main`, `dev`, `agent/**`, and `dev/**`, with manual build dispatch also supported.
 
