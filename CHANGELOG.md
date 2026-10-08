@@ -10,7 +10,7 @@
 
 ### Changed
 
-- Updated FragStealers from the Paper 26.2 release line to the pinned Paper `26.3.build.134-beta` API while continuing to require Java 25.
+- Updated FragStealers from the Paper 26.2 release line to Paper 26.3 while continuing to require Java 25.\n- Advanced the pinned Paper 26.3 beta API baseline from `26.3.build.134-beta` to `26.3.build.159-beta`.
 - Updated `plugin.yml` to declare Paper API version `26.3` and advanced the plugin version to `26.3-1.2.0`.
 - Updated the shop catalog classifier for Paper 26.3 materials while preserving the existing dynamic `Material`-based catalog behavior and runtime stack-size handling.
 - Classified all 26.3 explorer-map variants under Books & Maps before wood-family prefix matching so maps such as the Jungle Pyramid map cannot fall into a wood category.
