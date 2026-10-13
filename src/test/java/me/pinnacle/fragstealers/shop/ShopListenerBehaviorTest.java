@@ -9,12 +9,14 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.scheduler.BukkitTask;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,6 +46,7 @@ class ShopListenerBehaviorTest {
     private MasterKeyManager masterKeys;
     private BukkitScheduler scheduler;
     private Player player;
+    private PlayerInventory playerInventory;
     private Inventory stock;
     private ShopData shop;
     private ShopListener listener;
@@ -57,6 +60,7 @@ class ShopListenerBehaviorTest {
         scheduler = mock(BukkitScheduler.class);
         Server server = mock(Server.class);
         player = mock(Player.class);
+        playerInventory = mock(PlayerInventory.class);
         stock = mock(Inventory.class);
         shop = new ShopData(SIGN, Set.of(CONTAINER), OWNER, "Owner", Material.DIAMOND, 1, Material.EMERALD, 1, 0L);
 
@@ -65,6 +69,7 @@ class ShopListenerBehaviorTest {
         when(server.getScheduler()).thenReturn(scheduler);
         when(plugin.error(anyString())).thenReturn(Component.text("error"));
         when(player.getUniqueId()).thenReturn(TRUSTED);
+        when(player.getInventory()).thenReturn(playerInventory);
         when(manager.bySign(SIGN)).thenReturn(shop);
         when(manager.byInventory(stock)).thenReturn(shop);
         when(manager.inventory(shop)).thenReturn(stock);
@@ -123,6 +128,33 @@ class ShopListenerBehaviorTest {
         listener.onInventoryClick(remove);
 
         verify(remove, never()).setCancelled(true);
+    }
+
+    @Test
+    void paper26_3HotbarSwapStillRejectsWrongNumberKeyStock() {
+        when(plugin.canManageShop(player, shop)).thenReturn(true);
+        when(plugin.canRestockShop(player, shop)).thenReturn(true);
+        openStockSession();
+
+        ItemStack wrongMaterial = item(Material.DIRT);
+        when(playerInventory.getItem(2)).thenReturn(wrongMaterial);
+        InventoryClickEvent swap = stockClick(0, InventoryAction.HOTBAR_SWAP, item(Material.DIAMOND));
+        when(swap.getClick()).thenReturn(ClickType.NUMBER_KEY);
+        when(swap.getHotbarButton()).thenReturn(2);
+
+        listener.onInventoryClick(swap);
+
+        verify(swap).setCancelled(true);
+    }
+
+    @Test
+    void directPhysicalShopClickWithoutStockSessionFailsClosedAndClosesView() {
+        InventoryClickEvent direct = stockClick(0, InventoryAction.PICKUP_ALL, item(Material.DIAMOND));
+
+        listener.onInventoryClick(direct);
+
+        verify(direct).setCancelled(true);
+        verify(player).closeInventory();
     }
 
     @Test

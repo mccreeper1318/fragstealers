@@ -13,6 +13,7 @@ import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryMoveItemEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
@@ -32,6 +33,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -189,6 +191,60 @@ class ProtectionListenerBehaviorTest {
 
         verify(click).setCancelled(true);
         verify(player).closeInventory();
+    }
+
+    @Test
+    void hopperExtractionFromLockedContainerIsCancelledWhenTakeIsDisabled() {
+        Inventory source = mock(Inventory.class);
+        Inventory destination = mock(Inventory.class);
+        InventoryMoveItemEvent event = mock(InventoryMoveItemEvent.class);
+
+        when(event.getSource()).thenReturn(source);
+        when(event.getDestination()).thenReturn(destination);
+        when(resolver.inventoryTouches(eq(source), any())).thenReturn(true);
+        when(resolver.inventoryTouches(eq(destination), any())).thenReturn(false);
+        when(plugin.hopperTakeEnabled()).thenReturn(false);
+        when(plugin.hopperPutEnabled()).thenReturn(true);
+
+        listener.onInventoryMove(event);
+
+        verify(event).setCancelled(true);
+    }
+
+    @Test
+    void hopperInsertionIntoLockedContainerIsCancelledWhenPutIsDisabled() {
+        Inventory source = mock(Inventory.class);
+        Inventory destination = mock(Inventory.class);
+        InventoryMoveItemEvent event = mock(InventoryMoveItemEvent.class);
+
+        when(event.getSource()).thenReturn(source);
+        when(event.getDestination()).thenReturn(destination);
+        when(resolver.inventoryTouches(eq(source), any())).thenReturn(false);
+        when(resolver.inventoryTouches(eq(destination), any())).thenReturn(true);
+        when(plugin.hopperTakeEnabled()).thenReturn(true);
+        when(plugin.hopperPutEnabled()).thenReturn(false);
+
+        listener.onInventoryMove(event);
+
+        verify(event).setCancelled(true);
+    }
+
+    @Test
+    void hopperTransferTouchingShopIsAlwaysCancelled() {
+        Inventory source = mock(Inventory.class);
+        Inventory destination = mock(Inventory.class);
+        InventoryMoveItemEvent event = mock(InventoryMoveItemEvent.class);
+
+        when(event.getSource()).thenReturn(source);
+        when(event.getDestination()).thenReturn(destination);
+        when(shops.inventoryBelongsToAny(source)).thenReturn(true);
+        when(plugin.hopperTakeEnabled()).thenReturn(true);
+        when(plugin.hopperPutEnabled()).thenReturn(true);
+
+        listener.onInventoryMove(event);
+
+        verify(event).setCancelled(true);
+        verify(resolver, never()).inventoryTouches(any(), any());
     }
 
     private void assertCreatingMailboxClosesExistingViewers(boolean doubleChest) {

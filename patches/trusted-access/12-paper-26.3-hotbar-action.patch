@@ -1,0 +1,10 @@
+--- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopListener.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/shop/ShopListener.java
+@@ -525,1 +525,1 @@
+-        return action == InventoryAction.HOTBAR_SWAP || action == InventoryAction.HOTBAR_MOVE_AND_READD;
++        return action == InventoryAction.HOTBAR_SWAP;
+--- fsbase/FragStealers/src/main/java/me/pinnacle/fragstealers/mail/MailboxListener.java
++++ fswork/FragStealers/src/main/java/me/pinnacle/fragstealers/mail/MailboxListener.java
+@@ -251,1 +251,1 @@
+-        return action == InventoryAction.HOTBAR_SWAP || action == InventoryAction.HOTBAR_MOVE_AND_READD;
++        return action == InventoryAction.HOTBAR_SWAP;

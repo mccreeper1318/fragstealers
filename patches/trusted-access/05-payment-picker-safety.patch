@@ -56,7 +56,7 @@
 +        }
 +        return count;
 +    }
-@@ -59,7 +86,18 @@
+@@ -59,7 +86,19 @@
      public static boolean isAllowed(Material material) {
          if (material == null || !material.isItem() || material.isAir()) {
              return false;
@@ -69,6 +69,7 @@
 +        if (!isAllowed(material)) return false;
 +        String name = material.name();
 +        if (UNSAFE_PAYMENT.contains(name)) return false;
++        if (name.endsWith("_MAP")) return false;
 +        if (name.endsWith("POTION")) return false;
 +        if (name.startsWith("FIREWORK_")) return false;
 +        // Entity buckets can carry variant/entity state. New bucketed entities are unsafe by default

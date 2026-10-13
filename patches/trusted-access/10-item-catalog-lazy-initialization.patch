@@ -26,6 +26,6 @@
 @@ -63,1 +65,1 @@
 -        return ITEMS_BY_GROUP.getOrDefault(group, List.of());
 +        return CatalogData.ITEMS_BY_GROUP.getOrDefault(group, List.of());
-@@ -149,1 +151,1 @@
+@@ -150,1 +152,1 @@
 -        for (Material material : ITEMS) {
 +        for (Material material : CatalogData.ITEMS) {
