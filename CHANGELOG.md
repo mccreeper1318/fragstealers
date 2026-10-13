@@ -12,6 +12,7 @@
 
 - Updated FragStealers from the Paper 26.2 release line to Paper 26.3 while continuing to require Java 25.
 - Advanced the pinned Paper 26.3 beta API baseline from `26.3.build.134-beta` to `26.3.build.159-beta`.
+- Advanced the pinned Paper 26.3 API from `26.3.build.159-beta` to stable `26.3.build.178-stable`.
 - Updated `plugin.yml` to declare Paper API version `26.3` and advanced the plugin version to `26.3-1.2.0`.
 - Updated the shop catalog classifier for Paper 26.3 materials while preserving the existing dynamic `Material`-based catalog behavior and runtime stack-size handling.
 - Classified all 26.3 explorer-map variants under Books & Maps before wood-family prefix matching so maps such as the Jungle Pyramid map cannot fall into a wood category.
@@ -37,7 +38,7 @@
 - Added a 26.2-format persistence round-trip test confirming that existing lock records, configured shops and earnings, mailbox registrations, trust mappings, audit entries, and configuration load, save, and reload under the 26.3 code without an unnecessary migration.
 - Reviewed the existing authorization, stale-view, trust-revocation, Master Key, double-chest, shop, mailbox, transaction rollback, persistence-failure, hopper, and backing-inventory regression coverage against Paper 26.3.
 - Completed live Paper 26.3 runtime and 26.2-upgrade compatibility testing with no observed authorization bypass, stale-access, duplication, item-loss, or persistence regression.
-- Continued running the full automated suite and verified `clean build`, JAR validation, and artifact generation against the pinned Paper 26.3 beta API.
+- Continued running the full automated suite and verified `clean build`, JAR validation, and artifact generation against the current pinned Paper 26.3 API.
 
 ### Build and Release
 
